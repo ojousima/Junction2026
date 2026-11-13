@@ -7,23 +7,25 @@ Judging (Arduino "Green European Renaissance"): Edge AI and UNO Q use 30 %, envi
 
 ## Hardware
 - Arduino UNO Q: STM32U585 MCU (Zephyr, Arduino sketch) and Qualcomm QRB2210 (Debian Linux, Python), linked by the Arduino Bridge (RPC)
-- Modulino Movement (LSM6DSOX 6-axis IMU, Qwiic/I²C) for vibration
 - Modulino Thermo (temperature and humidity) for operating point and frost risk
-- Modulino Buzzer for the alarm; Modulino Pixels (if available) for the status LED
-- USB microphone (sound anomalies) and USB camera (coil icing / frost detection) on the Linux side, via a USB-C hub
+- Modulino Buzzer for the alarm
+- No IMU (no Modulino Movement) and no Modulino Pixels. Vibration faults are heard through the camera microphone instead.
+- Arduino USB Camera (TPX00246) on the Linux side, via a USB-C hub: camera for coil icing / frost, built-in microphone for sound/vibration anomalies
+- Status output: UNO Q on-board LED matrix / RGB LEDs, or the web dashboard
 - Setup steps and installed toolchain: see SETUP.md
 - Demo rig: desk fan as the "heat pump". Faults: coin or tape on a blade (imbalance), loose mount, cardboard over the intake (blocked coil)
 - Optional: Jetson for training only. The final demo runs on the UNO Q.
 
 ## Architecture
 ```
-IMU --I2C--> STM32 sketch
-             - LSM6DSOX ODR ~1.66–3.33 kHz, FIFO burst reads, I2C 400 kHz
-             - Hann window, FFT (CMSIS-DSP), ~64 log band energies + RMS + 1x peak freq
-             - send features ~1 Hz over Bridge (no raw data across Bridge)
+Thermo --I2C--> STM32 sketch
+             - temperature + humidity ~1 Hz over Bridge (operating point, frost risk)
+             - drives the Modulino Buzzer alarm
                      |
                      v
 Linux Python app
+             - USB mic: 16 kHz audio, Hann window, FFT, ~64 log band energies + RMS + peak freq per ~1 s
+             - USB camera: periodic frame of the coil, icing/frost score (OpenCV, later a visual model)
              - Layer 1: instant anomaly score (Edge Impulse model or sklearn IsolationForest/GMM)
              - Layer 2: slow-fouling tracker: residual = feature - healthy_model(operating point);
                Kalman filter with random-walk "fouling" state, plus CUSUM alarm

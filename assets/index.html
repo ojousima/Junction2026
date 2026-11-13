@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heat Pump Doctor</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+    --temp: #d9534f; --rh: #2f7fd1; --mic: #2a9d6f; --bar: #2a9d6f; --warn: #c27c0e; --bad: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e6e9ef; --muted: #8b93a5; --line: #2a303b;
+      --temp: #ff7a70; --rh: #6bb0ff; --mic: #4fd1a0; --bar: #4fd1a0; --warn: #f0b44c; --bad: #ff6b5b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 14px 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; }
+  #status { color: var(--muted); font-size: 13px; }
+  main { padding: 0 16px 16px; display: grid; gap: 12px;
+         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .tiles { grid-column: 1 / -1; display: grid; gap: 12px;
+           grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+  .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .value { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .unit { font-size: 14px; color: var(--muted); margin-left: 3px; }
+  h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  canvas { width: 100%; height: 200px; display: block; }
+  #cam { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; background: #000; display: block; }
+  .legend { font-size: 12px; color: var(--muted); display: flex; gap: 12px; margin-top: 6px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .off { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Heat Pump Doctor</h1>
+  <span id="status">connecting…</span>
+</header>
+<main>
+  <section class="tiles">
+    <div class="card"><div class="label">Temperature</div><div class="value"><span id="t">–</span><span class="unit">°C</span></div></div>
+    <div class="card"><div class="label">Humidity</div><div class="value"><span id="rh">–</span><span class="unit">%</span></div></div>
+    <div class="card"><div class="label">Sound level</div><div class="value"><span id="rms">–</span><span class="unit">dBFS</span></div></div>
+    <div class="card"><div class="label">Peak frequency</div><div class="value"><span id="peak">–</span><span class="unit">Hz</span></div></div>
+    <div class="card"><div class="label">Camera brightness</div><div class="value"><span id="bright">–</span><span class="unit">/255</span></div></div>
+  </section>
+  <section class="card">
+    <h2>Sound spectrum (64 log bands)</h2>
+    <canvas id="spec"></canvas>
+    <div class="legend"><span id="specaxis">50 Hz … 8 kHz</span></div>
+  </section>
+  <section class="card">
+    <h2>Last 5 minutes</h2>
+    <canvas id="hist"></canvas>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--temp)"></span>Temp °C</span>
+      <span><span class="dot" style="background:var(--rh)"></span>RH %</span>
+      <span><span class="dot" style="background:var(--mic)"></span>Sound dBFS</span>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Camera (coil view)</h2>
+    <img id="cam" alt="Camera frame">
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function setupCanvas(c) {
+  const dpr = window.devicePixelRatio || 1, r = c.getBoundingClientRect();
+  c.width = r.width * dpr; c.height = r.height * dpr;
+  const g = c.getContext('2d'); g.scale(dpr, dpr);
+  return [g, r.width, r.height];
+}
+
+function drawSpectrum(bands) {
+  const [g, w, h] = setupCanvas($('spec'));
+  g.clearRect(0, 0, w, h);
+  if (!bands.length) return;
+  const hi = Math.ceil((Math.max(...bands) + 3) / 10) * 10, lo = hi - 60, bw = w / bands.length;
+  g.fillStyle = css('--bar');
+  bands.forEach((db, i) => {
+    const v = Math.max(0, Math.min(1, (db - lo) / (hi - lo)));
+    g.fillRect(i * bw + 1, h - v * h, Math.max(1, bw - 2), v * h);
+  });
+  g.fillStyle = css('--muted'); g.font = '11px system-ui';
+  g.fillText(hi + ' dB', 2, 11); g.fillText(lo + ' dB', 2, h - 3);
+}
+
+function drawHistory(hist) {
+  const [g, w, h] = setupCanvas($('hist'));
+  g.clearRect(0, 0, w, h);
+  if (hist.length < 2) return;
+  const t0 = hist[hist.length - 1][0] - 300;
+  const series = [[1, '--temp'], [2, '--rh'], [3, '--mic']];
+  g.strokeStyle = css('--line'); g.lineWidth = 1;
+  for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(0, h * i / 4); g.lineTo(w, h * i / 4); g.stroke(); }
+  for (const [k, color] of series) {
+    const vals = hist.map(r => r[k]).filter(v => v !== null);
+    if (vals.length < 2) continue;
+    let mn = Math.min(...vals), mx = Math.max(...vals);
+    if (mx - mn < 1) { mn -= 0.5; mx += 0.5; }
+    g.strokeStyle = css(color); g.lineWidth = 2; g.beginPath();
+    let started = false;
+    for (const r of hist) {
+      if (r[k] === null) continue;
+      const x = (r[0] - t0) / 300 * w, y = h - 6 - (r[k] - mn) / (mx - mn) * (h - 12);
+      started ? g.lineTo(x, y) : g.moveTo(x, y); started = true;
+    }
+    g.stroke();
+  }
+}
+
+const fmt = (v, d = 1) => v === null || v === undefined ? '–' : Number(v).toFixed(d);
+
+async function tick() {
+  try {
+    const s = await (await fetch('/api/state', { cache: 'no-store' })).json();
+    $('t').textContent = fmt(s.temp_c);
+    $('rh').textContent = fmt(s.rh, 0);
+    $('rms').textContent = fmt(s.rms_dbfs);
+    $('peak').textContent = fmt(s.peak_hz, 0);
+    $('bright').textContent = fmt(s.cam_brightness, 0);
+    const parts = [s.temp_c !== null ? 'thermo ok' : '<span class="off">thermo –</span>',
+                   s.mic_ok ? 'mic ok' : '<span class="off">mic –</span>',
+                   s.cam_ok ? 'camera ok' : '<span class="off">camera –</span>'];
+    $('status').innerHTML = parts.join(' · ') + ' · ' + new Date().toLocaleTimeString();
+    drawSpectrum(s.bands_db || []);
+    drawHistory(s.history || []);
+    if (s.cam_ok) $('cam').src = '/api/frame.jpg?t=' + Date.now();
+  } catch (e) {
+    $('status').innerHTML = '<span class="off">board not reachable</span>';
+  }
+}
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

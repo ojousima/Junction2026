@@ -18,11 +18,11 @@ Hardware used by Heat Pump Doctor. Values marked *(check)* come from vendor mate
 ## Sensors and actuators
 | Module | Chip | Use | Notes |
 |---|---|---|---|
-| Modulino Movement | LSM6DSOX 6-axis IMU | Vibration | Accel ±2/4/8/16 g, ODR up to 6.66 kHz, 9 KB FIFO, I²C up to 1 MHz *(check)*. We plan ODR ~1.66–3.33 kHz, FIFO burst reads, I²C 400 kHz |
+| ~~Modulino Movement~~ | ~~LSM6DSOX 6-axis IMU~~ | ~~Vibration~~ | **Not available.** Vibration is heard through the camera microphone instead |
 | Modulino Thermo | HS3003 *(check)* | Temperature, humidity: operating point, frost risk | ~1 Hz is enough |
-| Modulino Buzzer | — | Alarm | |
-| Modulino Pixels | 8 RGB LEDs | Status LED | If available |
-| Arduino USB Camera (TPX00246) | — | Coil icing / frost (camera), sound anomalies (built-in mic) | Camera + HD microphone + adaptive LED ring light + privacy shutter in one USB device, made for UNO Q / App Lab. Resolution: sources disagree (720p/1080p, 2 MP vs 4K) *(check)*. Linux side, OpenCV; check with `v4l2-ctl --list-devices` and `arecord -l`. Open the privacy shutter before the demo |
+| Modulino Buzzer | — | Alarm | Available |
+| ~~Modulino Pixels~~ | ~~8 RGB LEDs~~ | ~~Status LED~~ | **Not available.** Status on the on-board LEDs or the web dashboard |
+| Arduino USB Camera (TPX00246) | — | Coil icing / frost (camera), sound and vibration anomalies (built-in mic) | Camera + HD microphone + adaptive LED ring light + privacy shutter in one USB device, made for UNO Q / App Lab. Resolution: sources disagree (720p/1080p, 2 MP vs 4K) *(check)*. Linux side, OpenCV; check with `v4l2-ctl --list-devices` and `arecord -l`. Open the privacy shutter before the demo |
 | USB-C hub (powered) | — | Connects the camera to the board's single USB-C port | |
 
 ## Software versions (pinned)
