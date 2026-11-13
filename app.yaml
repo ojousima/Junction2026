@@ -1,4 +1,5 @@
 name: Heat Pump Doctor
 icon: 🩺
 description: Edge-AI heat pump diagnostics (vibration, sound, temperature, coil icing) on Arduino UNO Q.
-bricks: []
+bricks:
+  - arduino:web_ui

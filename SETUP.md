@@ -39,7 +39,7 @@ arduino-cli compile --profile default sketch
    v4l2-ctl --list-devices   # camera
    arecord -l                # microphone
    ```
-5. Copy this project into App Lab's apps folder (or open it from App Lab) and run it. The smoke test prints temperature, humidity and acceleration once per second.
+5. Copy this project into App Lab's apps folder (or open it from App Lab) and run it. The smoke test prints temperature and humidity once per second.
 
 ## Board state (2026-11-13, first connection)
 - Hostname `uno-q`, user `arduino`, Debian 13 trixie, kernel 6.16, Python 3.13.5, **2 GB RAM** variant, 3.1 GB free on `/`.
@@ -54,9 +54,12 @@ arduino-cli compile --profile default sketch
 
 Update done the same evening: Wi-Fi `Koti_A499_2GM` (10.149.88.102), `arduino-app-cli system update --only-arduino --yes`
 brought `arduino-app-cli` 0.14.1, `arduino-router` 0.11.0 and Zephyr core 1.1.0 (matches the Mac).
-Still open:
-- Kernel 7.0 is installed but not booted. Needs `sudo reboot` (the `arduino` password is set; `adb reboot` does nothing).
-- Docker image pull for `ei-models-runner` was killed at 78 %. Rerun the update after the reboot; the Edge Impulse bricks need it.
+- Rebooted into kernel 7.0.0 (`sudo reboot` with the `arduino` password; `adb reboot` does nothing).
+- Brick images are pulled lazily when an app first uses a brick. Pre-pulled so the demo works offline:
+  `ghcr.io/arduino/app-bricks/ei-models-runner:0.13.2` (audio/vibration/visual anomaly, image classification)
+  and `influxdb:2.7-alpine` (`dbstorage_tsstore`). Image tags per brick:
+  `/var/lib/arduino-app-cli/assets/0.13.2/compose/arduino/*/brick_compose.yaml`. 2.7 GB left on `/`.
+- Run long jobs detached on the board (`nohup ... &`); a pull through a foreground `adb shell` was killed at 78 %.
 - The board has no working IPv6; DNS returns AAAA records, but IPv4 is used and works.
 
 **adb gotcha:** `adb shell` sets `TMPDIR=/data/local/tmp` (Android default), which does not exist on the board.
@@ -74,6 +77,79 @@ adb shell 'docker logs -f heatpump-doctor-main-1'
 Smoke test result: Thermo OK (24.0 °C, 35 % RH). We have no Modulino Movement; sketch reads Thermo only.
 Example apps worth reading on the board: `~/.local/share/arduino-app-cli/examples/`
 (`real-time-accelerometer`, `audio-classification` uses `arduino.app_peripherals.microphone.Microphone`).
+
+## Wireless access (SSH)
+SSH was off on the stock image and had no host keys. Enabled once over adb (needs the `arduino` password):
+
+```bash
+adb shell -t "sudo ssh-keygen -A && sudo systemctl enable --now ssh"
+```
+
+Key login from the Mac uses a board-only key `~/.ssh/id_ed25519_unoq` and this `~/.ssh/config` entry:
+
+```
+Host uno-q
+  HostName 10.149.88.102
+  User arduino
+  IdentityFile ~/.ssh/id_ed25519_unoq
+  IdentitiesOnly yes
+```
+
+Deploy over Wi-Fi:
+
+```bash
+scp -r app.yaml python sketch uno-q:ArduinoApps/heatpump-doctor/
+ssh uno-q 'cd ~/ArduinoApps/heatpump-doctor && arduino-app-cli app stop .; arduino-app-cli app start .'
+ssh uno-q 'docker logs -f heatpump-doctor-main-1'
+```
+
+### Team access
+Each teammate makes their own key and sends only the **public** half (`.pub`). Never share a private key.
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_unoq -C "<name>-uno-q"
+cat ~/.ssh/id_ed25519_unoq.pub      # send this line
+```
+
+Someone with access appends it on the board:
+
+```bash
+ssh uno-q 'cat >> ~/.ssh/authorized_keys' < teammate.pub
+```
+
+Teammates must be on the same Wi-Fi as the board and add the same `Host uno-q` block to their `~/.ssh/config`.
+The IP comes from DHCP: if it changes, check the router or run `ip -4 -br addr show wlan0` on the board.
+
+## Camera and mic (Arduino USB Camera on the hub)
+- Enumerates as `1c45:6200 HHWei Technology Web Camera`. Video at `/dev/video2` (`/dev/video0-1` are the Qualcomm codecs).
+- Video: MJPEG 320x240 … 4656x3496 (incl. 1920x1080, 3840x2160); YUYV only 640x480 / 320x240. ~24 fps at 1280x720.
+- Mic: ALSA card 0 (`plughw:0,0`), S16_LE, 48 kHz, 2 channels (identical, so effectively mono). Ambient level
+  in a quiet room about −15 dBFS RMS with peaks near 0 dBFS: input gain is high, watch for clipping.
+- Quick test on the board:
+  ```bash
+  v4l2-ctl -d /dev/video2 --set-fmt-video=width=1280,height=720,pixelformat=MJPG --stream-mmap --stream-count=60 --stream-to=/tmp/burst.mjpg
+  arecord -D plughw:0,0 -f S16_LE -r 48000 -c 2 -d 5 /tmp/mic.wav
+  ```
+- The hub also has an RTL8152 Ethernet adapter, usable as a wired fallback.
+- Image was all black (mean 1/255) with the lens cover on. Auto exposure (`auto_exposure=0`) works once it is off.
+  Do not set `exposure_time_absolute=10000` (≈1 s per frame); a capture with it stalled and the board dropped off Wi-Fi.
+
+### From the app container (verified)
+The generated compose (`~/ArduinoApps/heatpump-doctor/.cache/app-compose.yaml`) binds `/dev` and allows video (81)
+and ALSA (116) devices, so plain OpenCV and `alsaaudio` work in `python/main.py` with no `app.yaml` changes.
+Measured: 30/30 frames at 1280x720 (~20 fps), and 16 kHz mono capture (ALSA resamples from 48 kHz).
+
+```python
+import cv2, alsaaudio
+cap = cv2.VideoCapture("/dev/video2", cv2.CAP_V4L2)
+cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280); cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+pcm = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, device="plughw:CARD=Camera,DEV=0", channels=1,
+                    rate=16000, format=alsaaudio.PCM_FORMAT_S16_LE, periodsize=1600)
+```
+
+Available in the container: `cv2`, `numpy`, `alsaaudio`, `arduino.app_peripherals.{camera,microphone,speaker}`.
+Not available: `sounddevice`. Use the ALSA card name (`CARD=Camera`), not the number, which can change.
 
 ## Sensors
 | Signal | Sensor | Runs on |
