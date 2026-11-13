@@ -1,24 +1,22 @@
-// Smoke test: Modulino Thermo + Movement readout over Bridge.
+// MCU side: Modulino Thermo readout, sent to Linux over the Bridge once per second.
+// Sound/vibration and camera are handled on the Linux side (USB mic + USB camera).
 #include <Arduino_Modulino.h>
 #include <Arduino_RouterBridge.h>
 
 ModulinoThermo thermo;
-ModulinoMovement imu;
 bool thermo_ok = false;
-bool imu_ok = false;
 
 void setup() {
   Bridge.begin();
   Modulino.begin();
   thermo_ok = thermo.begin();
-  imu_ok = imu.begin();
 }
 
 void loop() {
-  int fresh = imu_ok ? imu.update() : 0;
-  float t = thermo.getTemperature();
-  float h = thermo.getHumidity();
-  Bridge.notify("env", t, h, imu.getX(), imu.getY(), imu.getZ());
-  Bridge.notify("status", (int)thermo_ok, (int)imu_ok, fresh);
+  if (thermo_ok) {
+    Bridge.notify("env", thermo.getTemperature(), thermo.getHumidity());
+  } else {
+    Bridge.notify("sensor_error", "thermo");
+  }
   delay(1000);
 }
