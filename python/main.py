@@ -48,6 +48,9 @@ def on_env(temp_c, rh):
 
 
 def on_sensor_error(name):
+    if name == "thermo":
+        with lock:
+            state.update(temp_c=None, rh=None)
     print(f"sensor not found: {name}")
 
 
