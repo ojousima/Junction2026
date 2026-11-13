@@ -4,6 +4,7 @@ Collects Thermo readings (over the Bridge), microphone band energies and camera 
 logs features to CSV under data/, and serves a browser view on port 7000.
 """
 import csv
+import glob
 import os
 import threading
 import time
@@ -18,7 +19,7 @@ from arduino.app_bricks.web_ui import WebUI
 from arduino.app_utils import App, Bridge
 
 MIC_DEVICE = "plughw:CARD=Camera,DEV=0"
-CAM_DEVICE = "/dev/video2"
+CAM_GLOB = "/dev/v4l/by-id/usb-*-video-index0"  # /dev/videoN number changes between boots
 SR = 16000
 N_BANDS = 64
 HISTORY_S = 300
@@ -103,7 +104,8 @@ def mic_loop():
 def cam_loop():
     global latest_jpeg
     while True:
-        cap = cv2.VideoCapture(CAM_DEVICE, cv2.CAP_V4L2)
+        found = sorted(glob.glob(CAM_GLOB))
+        cap = cv2.VideoCapture(os.path.realpath(found[0]) if found else "/dev/video0", cv2.CAP_V4L2)
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)

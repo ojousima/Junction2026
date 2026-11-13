@@ -98,10 +98,22 @@ Host uno-q
 Deploy over Wi-Fi:
 
 ```bash
-scp -r app.yaml python sketch uno-q:ArduinoApps/heatpump-doctor/
+scp -r app.yaml python sketch assets uno-q:ArduinoApps/heatpump-doctor/
 ssh uno-q 'cd ~/ArduinoApps/heatpump-doctor && arduino-app-cli app stop .; arduino-app-cli app start .'
 ssh uno-q 'docker logs -f heatpump-doctor-main-1'
 ```
+
+Live data view: http://10.149.88.102:7000 (any device on the same Wi-Fi).
+
+**Autostart:** Heat Pump Doctor is the board's default app, so it starts on every boot.
+Check or undo with:
+
+```bash
+ssh uno-q 'arduino-app-cli properties get default'
+ssh uno-q 'arduino-app-cli properties set default none'
+```
+
+After a reset the board needs about a minute to rejoin Wi-Fi.
 
 ### Team access
 Each teammate makes their own key and sends only the **public** half (`.pub`). Never share a private key.
@@ -121,13 +133,14 @@ Teammates must be on the same Wi-Fi as the board and add the same `Host uno-q` b
 The IP comes from DHCP: if it changes, check the router or run `ip -4 -br addr show wlan0` on the board.
 
 ## Camera and mic (Arduino USB Camera on the hub)
-- Enumerates as `1c45:6200 HHWei Technology Web Camera`. Video at `/dev/video2` (`/dev/video0-1` are the Qualcomm codecs).
+- Enumerates as `1c45:6200 HHWei Technology Web Camera`. The `/dev/videoN` number changes between boots
+  (seen as `/dev/video2` and `/dev/video0`), so open it by name: `/dev/v4l/by-id/usb-*-video-index0`.
 - Video: MJPEG 320x240 … 4656x3496 (incl. 1920x1080, 3840x2160); YUYV only 640x480 / 320x240. ~24 fps at 1280x720.
 - Mic: ALSA card 0 (`plughw:0,0`), S16_LE, 48 kHz, 2 channels (identical, so effectively mono). Ambient level
   in a quiet room about −15 dBFS RMS with peaks near 0 dBFS: input gain is high, watch for clipping.
 - Quick test on the board:
   ```bash
-  v4l2-ctl -d /dev/video2 --set-fmt-video=width=1280,height=720,pixelformat=MJPG --stream-mmap --stream-count=60 --stream-to=/tmp/burst.mjpg
+  v4l2-ctl -d /dev/v4l/by-id/usb-*-video-index0 --set-fmt-video=width=1280,height=720,pixelformat=MJPG --stream-mmap --stream-count=60 --stream-to=/tmp/burst.mjpg
   arecord -D plughw:0,0 -f S16_LE -r 48000 -c 2 -d 5 /tmp/mic.wav
   ```
 - The hub also has an RTL8152 Ethernet adapter, usable as a wired fallback.
@@ -140,8 +153,9 @@ and ALSA (116) devices, so plain OpenCV and `alsaaudio` work in `python/main.py`
 Measured: 30/30 frames at 1280x720 (~20 fps), and 16 kHz mono capture (ALSA resamples from 48 kHz).
 
 ```python
-import cv2, alsaaudio
-cap = cv2.VideoCapture("/dev/video2", cv2.CAP_V4L2)
+import glob, os, cv2, alsaaudio
+cam = os.path.realpath(sorted(glob.glob("/dev/v4l/by-id/usb-*-video-index0"))[0])
+cap = cv2.VideoCapture(cam, cv2.CAP_V4L2)
 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280); cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 pcm = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, device="plughw:CARD=Camera,DEV=0", channels=1,
