@@ -53,3 +53,11 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Heat Pump Doctor
+.venv/
+__pycache__/
+data/*.csv
+data/*.wav
+data/*.jpg
+.DS_Store
