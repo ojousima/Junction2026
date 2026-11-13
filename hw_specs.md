@@ -22,9 +22,8 @@ Hardware used by Heat Pump Doctor. Values marked *(check)* come from vendor mate
 | Modulino Thermo | HS3003 *(check)* | Temperature, humidity: operating point, frost risk | ~1 Hz is enough |
 | Modulino Buzzer | — | Alarm | |
 | Modulino Pixels | 8 RGB LEDs | Status LED | If available |
-| USB microphone | — | Sound anomalies | Linux side, check with `arecord -l` |
-| USB camera | — | Coil icing / frost | Linux side, OpenCV, check with `v4l2-ctl --list-devices` |
-| USB-C hub (powered) | — | Camera + mic | |
+| Arduino USB Camera (TPX00246) | — | Coil icing / frost (camera), sound anomalies (built-in mic) | Camera + HD microphone + adaptive LED ring light + privacy shutter in one USB device, made for UNO Q / App Lab. Resolution: sources disagree (720p/1080p, 2 MP vs 4K) *(check)*. Linux side, OpenCV; check with `v4l2-ctl --list-devices` and `arecord -l`. Open the privacy shutter before the demo |
+| USB-C hub (powered) | — | Connects the camera to the board's single USB-C port | |
 
 ## Software versions (pinned)
 - Mac: `arduino-cli` 1.6.0, core `arduino:zephyr` 1.1.0, FQBN `arduino:zephyr:unoq`
