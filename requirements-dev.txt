@@ -1,0 +1,10 @@
+# Mac-side prototyping / training. Device-side deps go in python/requirements.txt.
+numpy
+scipy
+scikit-learn
+pandas
+matplotlib
+opencv-python-headless
+sounddevice
+soundfile
+pyserial
