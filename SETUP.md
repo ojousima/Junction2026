@@ -69,7 +69,7 @@ Deploy from the Mac without the App Lab GUI (`app restart` refuses a running app
 
 ```bash
 adb shell 'mkdir -p /home/arduino/ArduinoApps/heatpump-doctor'
-adb push app.yaml python sketch /home/arduino/ArduinoApps/heatpump-doctor/
+adb push app.yaml python sketch assets /home/arduino/ArduinoApps/heatpump-doctor/
 adb shell 'export TMPDIR=/tmp; cd ~/ArduinoApps/heatpump-doctor && arduino-app-cli app stop .; arduino-app-cli app start .'
 adb shell 'docker logs -f heatpump-doctor-main-1'
 ```
