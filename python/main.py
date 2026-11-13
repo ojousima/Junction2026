@@ -95,7 +95,7 @@ def mic_loop():
                                      bands_db=[round(float(b), 1) for b in bands_db])
         except Exception as e:
             with lock:
-                state["mic_ok"] = False
+                state.update(mic_ok=False, rms_dbfs=None, peak_hz=None, bands_db=[])
             print(f"mic error: {e}; retrying in 3 s")
             time.sleep(3)
 
