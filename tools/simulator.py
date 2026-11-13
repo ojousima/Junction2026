@@ -99,9 +99,9 @@ def main():
                 print(f"{r[1].isoformat()}  {r[0][:8]}…  {r[2]:6.2f} C  {r[3]:5.1f} %")
             if not args.dry_run:
                 with conn.cursor() as cur:
-                    cur.executemany(
+                    cur.execute(
                         "INSERT INTO sensors.measurements (sensor_id, time, temperature, humidity)"
-                        " VALUES (%s, %s, %s, %s)", rows)
+                        " VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)", rows[0] + rows[1])
             time.sleep(args.interval)
     except KeyboardInterrupt:
         pass
