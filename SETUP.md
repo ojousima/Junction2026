@@ -42,6 +42,7 @@ arduino-cli compile --profile default sketch
 Deploy from the Mac without the App Lab GUI:
 
 ```bash
+adb shell 'mkdir -p /home/arduino/ArduinoApps/heatpump-doctor'
 adb push app.yaml python sketch /home/arduino/ArduinoApps/heatpump-doctor/
 adb shell 'cd ~/ArduinoApps/heatpump-doctor && arduino-app-cli app start .'
 adb shell 'arduino-app-cli app logs ~/ArduinoApps/heatpump-doctor'
