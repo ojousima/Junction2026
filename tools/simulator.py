@@ -68,6 +68,8 @@ def main():
     ap.add_argument("--interval", type=float, default=60.0, help="seconds between samples (default 60)")
     ap.add_argument("--dry-run", action="store_true", help="print rows, don't touch the database")
     args = ap.parse_args()
+    if not math.isfinite(args.interval) or args.interval <= 0:
+        ap.error("--interval must be a positive, finite number")
 
     print(f"sensor A {SENSOR_A} -> ({TARGET_A_T} C, {TARGET_A_RH} %RH)")
     print(f"sensor B {SENSOR_B} -> ({TARGET_B_T} C, {TARGET_B_RH:.1f} %RH)")
