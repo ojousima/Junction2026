@@ -125,7 +125,7 @@ def cam_loop():
                 state.update(cam_ok=True, cam_brightness=round(float(frame.mean()), 1))
         cap.release()
         with lock:
-            state["cam_ok"] = False
+            state.update(cam_ok=False, cam_brightness=None)
         print("camera error; retrying in 3 s")
         time.sleep(3)
 
