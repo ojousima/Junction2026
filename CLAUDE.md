@@ -7,10 +7,11 @@ Judging (Arduino "Green European Renaissance"): Edge AI and UNO Q use 30 %, envi
 
 ## Hardware
 - Arduino UNO Q: STM32U585 MCU (Zephyr, Arduino sketch) and Qualcomm QRB2210 (Debian Linux, Python), linked by the Arduino Bridge (RPC)
-- Modulino Thermo (temperature and humidity) for operating point and frost risk. Only Modulino we have.
-- No IMU (no Modulino Movement). Vibration faults are heard through the USB microphone instead.
-- USB microphone (sound/vibration anomalies) and USB camera (coil icing / frost detection) on the Linux side, via a USB-C hub
-- Alarm/status output: TBD (UNO Q on-board LED matrix / RGB LEDs, or the web dashboard)
+- Modulino Thermo (temperature and humidity) for operating point and frost risk
+- Modulino Buzzer for the alarm
+- No IMU (no Modulino Movement) and no Modulino Pixels. Vibration faults are heard through the camera microphone instead.
+- Arduino USB Camera (TPX00246) on the Linux side, via a USB-C hub: camera for coil icing / frost, built-in microphone for sound/vibration anomalies
+- Status output: UNO Q on-board LED matrix / RGB LEDs, or the web dashboard
 - Setup steps and installed toolchain: see SETUP.md
 - Demo rig: desk fan as the "heat pump". Faults: coin or tape on a blade (imbalance), loose mount, cardboard over the intake (blocked coil)
 - Optional: Jetson for training only. The final demo runs on the UNO Q.
@@ -19,7 +20,7 @@ Judging (Arduino "Green European Renaissance"): Edge AI and UNO Q use 30 %, envi
 ```
 Thermo --I2C--> STM32 sketch
              - temperature + humidity ~1 Hz over Bridge (operating point, frost risk)
-             - drives local alarm LEDs
+             - drives the Modulino Buzzer alarm
                      |
                      v
 Linux Python app

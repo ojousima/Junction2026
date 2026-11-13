@@ -2,7 +2,7 @@
 
 ## Mac (dev machine) — done
 - `arduino-cli` 1.6.0 (Homebrew), core `arduino:zephyr` 1.1.0 (FQBN `arduino:zephyr:unoq`)
-- Libraries: `Arduino_Modulino` 0.10.0 (Thermo only), `Arduino_RouterBridge` 0.4.4 (+ deps, pinned in `sketch/sketch.yaml`)
+- Libraries: `Arduino_Modulino` 0.10.0 (Thermo, Buzzer), `Arduino_RouterBridge` 0.4.4 (+ deps, pinned in `sketch/sketch.yaml`)
 - `adb` (Homebrew cask `android-platform-tools`) for a shell on the UNO Q over USB
 - Python 3.13 venv in `.venv/` with `requirements-dev.txt` (numpy, scipy, scikit-learn, pandas, matplotlib, opencv, sounddevice, soundfile)
 - Edge Impulse CLI 1.40.2 (`npm install -g edge-impulse-cli`, Node 26): `edge-impulse-daemon`, `-data-forwarder`,
@@ -79,8 +79,9 @@ Example apps worth reading on the board: `~/.local/share/arduino-app-cli/example
 | Signal | Sensor | Runs on |
 |---|---|---|
 | Temperature / humidity | Modulino Thermo | STM32 sketch, ~1 Hz over Bridge |
-| Sound / vibration | USB microphone | Linux Python (FFT features) |
-| Coil icing | USB camera | Linux Python (OpenCV) |
-| Alarm | On-board LEDs / web dashboard (TBD) | STM32 sketch / Linux |
+| Sound / vibration | Arduino USB Camera microphone | Linux Python (FFT features) |
+| Coil icing | Arduino USB Camera (TPX00246) | Linux Python (OpenCV) |
+| Alarm | Modulino Buzzer | STM32 sketch |
+| Status | On-board LEDs / web dashboard | STM32 sketch / Linux |
 
 No Modulino Movement: vibration faults are detected acoustically.
