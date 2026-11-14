@@ -46,6 +46,27 @@ class PushEndpointTests(unittest.TestCase):
 
 
 class DatabaseTLSConfigurationTests(unittest.TestCase):
+    def test_ca_diagnostics_report_source_and_format_without_contents(self):
+        pg = types.ModuleType("psycopg2")
+        pg.extras = types.ModuleType("psycopg2.extras")
+        raw_ca = "-----BEGIN CERTIFICATE-----\\nPRIVATE-TEST-CONTENT\\n-----END CERTIFICATE-----"
+        encoded_ca = base64.b64encode(b"-----BEGIN CERTIFICATE-----\nOTHER\n"
+                                      b"-----END CERTIFICATE-----").decode("ascii")
+        with patch.dict(sys.modules, {"psycopg2": pg, "psycopg2.extras": pg.extras}), \
+                patch.dict("os.environ", {"AIVEN_CA_CERT": raw_ca, "PROJECT_CA_CERT": encoded_ca}), \
+                patch.object(cloud_app.tempfile, "NamedTemporaryFile"), \
+                patch.object(cloud_app.Postgres, "run"), \
+                patch("builtins.print") as log:
+            cloud_app.Postgres("postgresql://example")
+
+        messages = [call.args[0] for call in log.call_args_list]
+        self.assertIn("source=AIVEN_CA_CERT", messages[0])
+        self.assertIn("AIVEN_CA_CERT set=True, PROJECT_CA_CERT set=True", messages[0])
+        self.assertIn("begin marker=True, end marker=True, line breaks=False, escaped newlines=True",
+                      messages[1])
+        self.assertNotIn("PRIVATE-TEST-CONTENT", " ".join(messages))
+        self.assertNotIn(encoded_ca, " ".join(messages))
+
     def test_injected_project_ca_enables_server_verification(self):
         pg = types.ModuleType("psycopg2")
         pg.extras = types.ModuleType("psycopg2.extras")
@@ -53,10 +74,12 @@ class DatabaseTLSConfigurationTests(unittest.TestCase):
         with patch.dict(sys.modules, {"psycopg2": pg, "psycopg2.extras": pg.extras}), \
                 patch.dict("os.environ", {"AIVEN_CA_CERT": "", "PROJECT_CA_CERT": encoded_ca}), \
                 patch.object(cloud_app.tempfile, "NamedTemporaryFile") as tempfile, \
-                patch.object(cloud_app.Postgres, "run") as run:
+                patch.object(cloud_app.Postgres, "run") as run, \
+                patch("builtins.print") as log:
             tempfile.return_value.name = "/tmp/project-ca.pem"
             db = cloud_app.Postgres("postgresql://example")
 
+        self.assertIn("source=PROJECT_CA_CERT", log.call_args_list[0].args[0])
         tempfile.return_value.write.assert_called_once_with("project CA\n\n")
         self.assertEqual(db.kwargs, {"sslmode": "verify-full", "sslrootcert": "/tmp/project-ca.pem"})
         self.assertEqual(len(run.call_args_list), 3)
