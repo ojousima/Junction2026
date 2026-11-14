@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: aiven-terraform
+  group: aiven-terraform-${{ github.ref }}
   cancel-in-progress: false
 
 defaults:
