@@ -1,4 +1,4 @@
-# Heat Pump Doctor cloud dashboard for Aiven Runtime (build path: cloud/)
+# Heat Pump Doctor cloud dashboard for Aiven Runtime (build path: infra/aiven/cloud/)
 FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .

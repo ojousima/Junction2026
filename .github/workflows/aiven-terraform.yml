@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "infra/aiven/**"
+      - "!infra/aiven/cloud/**"
       - ".github/workflows/aiven-terraform.yml"
   pull_request:
     paths:
       - "infra/aiven/**"
+      - "!infra/aiven/cloud/**"
       - ".github/workflows/aiven-terraform.yml"
   workflow_dispatch:
 
