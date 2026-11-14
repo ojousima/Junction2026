@@ -79,9 +79,9 @@ jobs:
           terraform show -json "$RUNNER_TEMP/aiven.tfplan" | python3 -c '
           import json, sys
           plan = json.load(sys.stdin)
-          deletions = [r["address"] for r in plan.get("resource_changes", []) if "delete" in r["change"]["actions"]]
-          if deletions:
-              print("Automatic apply refuses deletions or replacements: " + ", ".join(deletions), file=sys.stderr)
+          blocked = [r["address"] for r in plan.get("resource_changes", []) if any(action in {"create", "delete"} for action in r["change"]["actions"])]
+          if blocked:
+              print("Automatic apply refuses creations, deletions or replacements: " + ", ".join(blocked), file=sys.stderr)
               sys.exit(1)
           '
           terraform apply -input=false -no-color "$RUNNER_TEMP/aiven.tfplan"
