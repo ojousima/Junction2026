@@ -1,6 +1,7 @@
 """Publish sampled sensor readings and the end-user health summary to PostgreSQL
 without blocking acquisition."""
 
+import ipaddress
 import math
 import os
 import time
@@ -46,7 +47,28 @@ def device_id(serial):
     return sensor_id(serial, "heatpump-1")
 
 
-def build_health_rows(state, now, serial):
+def board_local_ip():
+    path = Path(__file__).resolve().parent.parent / "data" / "board-lan-ip"
+    try:
+        lines = path.read_text(encoding="ascii").splitlines()
+        if len(lines) != 2:
+            raise ValueError("invalid LAN address file")
+        boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+        if not boot_id or lines[1] != boot_id:
+            print("health LAN address unavailable: stale board boot", flush=True)
+            return None
+        address = ipaddress.IPv4Address(lines[0])
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"health LAN address unavailable: {type(exc).__name__}", flush=True)
+        return None
+    if (address.is_loopback or address.is_link_local or address.is_multicast
+            or address.is_unspecified or address.is_reserved):
+        print("health LAN address unavailable: not a usable unicast address", flush=True)
+        return None
+    return str(address)
+
+
+def build_health_rows(state, now, serial, local_ip=None):
     """One row per component (coil, fan, compressor, defrost) with level and text.
 
     Sent every interval, not only on change, so the cloud also knows the device is online.
@@ -56,7 +78,10 @@ def build_health_rows(state, now, serial):
     if summary["overall"] == "unknown":
         return []
     dev = device_id(serial)
-    return [(dev, now, name, c["level"], c["text"]) for name, c in summary["components"].items()]
+    rows = [(dev, now, name, c["level"], c["text"])
+            for name, c in summary["components"].items()]
+    rows.append((dev, now, "local_ip", "ok" if local_ip else "unknown", local_ip or ""))
+    return rows
 
 
 def audio_metrics():
@@ -106,7 +131,7 @@ def run(snapshot):
     while True:
         state, sample_times = snapshot()
         measurements, included = build_rows(state, sample_times, sent_times, serial)
-        health_rows = build_health_rows(state, datetime.now(timezone.utc), serial)
+        health_rows = build_health_rows(state, datetime.now(timezone.utc), serial, board_local_ip())
         if measurements or health_rows:
             try:
                 with closing(psycopg2.connect(conninfo, connect_timeout=10, sslmode="verify-full",

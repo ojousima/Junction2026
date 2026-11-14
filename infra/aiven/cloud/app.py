@@ -105,7 +105,8 @@ class Postgres:
         rows = self.run("""SELECT DISTINCT ON (component) component, level, message, time
                            FROM sensors.health_status WHERE device_id = %s
                            ORDER BY component, time DESC""", (device,), fetch=True)
-        return {r["component"]: {"level": r["level"], "text": r["message"], "time": r["time"]} for r in rows}
+        return {r["component"]: {"level": r["level"], "text": r["message"], "time": r["time"]}
+                for r in rows}
 
     def subscribe(self, device, sub):
         self.run("""INSERT INTO cloud.push_subscriptions (endpoint, device_id, subscription)
@@ -198,14 +199,18 @@ def api_devices():
 def api_status(device: str):
     device = valid_device(device)
     latest = store.latest(device)
-    if not latest:
+    health = {name: component for name, component in latest.items() if name != "local_ip"}
+    if not health:
         raise HTTPException(404, "no data from this device yet")
-    last = max(c["time"] for c in latest.values())
+    last = max(component["time"] for component in health.values())
     age = (datetime.now(timezone.utc) - last).total_seconds()
     order = ["unknown", "ok", "watch", "alert"]
-    known = [c["level"] for c in latest.values() if c["level"] != "unknown"]
+    known = [c["level"] for c in health.values() if c["level"] != "unknown"]
+    address = latest.get("local_ip")
+    local_ip = (address["text"] if address and address["level"] == "ok"
+                and address["time"] == last else None)
     return {
-        "device": device, "demo": DEMO,
+        "device": device, "demo": DEMO, "local_ip": local_ip,
         "last_seen": last.isoformat(), "age_s": round(age), "online": age < ONLINE_S,
         "overall": max(known, key=order.index) if known else "unknown",
         "components": {c: {"level": latest[c]["level"], "text": latest[c]["text"]}
@@ -333,6 +338,8 @@ def push_loop():
             for device in {d for d, _ in store.subscriptions()}:
                 latest, seen = store.latest(device), store.alert_state(device)
                 for comp, c in latest.items():
+                    if comp == "local_ip":
+                        continue
                     if c["level"] == seen.get(comp):
                         continue
                     if c["level"] == "alert" and VAPID_PRIVATE:

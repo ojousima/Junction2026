@@ -3,9 +3,9 @@
 CREATE TABLE IF NOT EXISTS sensors.health_status (
     device_id UUID NOT NULL,          -- UUIDv5 of heat-pump-doctor/<serial>/heatpump-1
     time TIMESTAMPTZ NOT NULL,
-    component TEXT NOT NULL,          -- coil | fan | compressor | defrost
+    component TEXT NOT NULL,          -- coil | fan | compressor | defrost | local_ip
     level TEXT NOT NULL,              -- unknown | ok | watch | alert
-    message TEXT NOT NULL,            -- one plain English sentence for the homeowner
+    message TEXT NOT NULL,            -- health text, or the LAN address for local_ip
     PRIMARY KEY (device_id, component, time)
 );
 -- The board's writer may only insert; the dashboard only reads.

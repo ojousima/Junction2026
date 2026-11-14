@@ -47,3 +47,7 @@ with `level` (`unknown`, `ok`, `watch`, `alert`) and a plain English `message`, 
 `device_id` = UUIDv5 of `heat-pump-doctor/<hardware-serial>/heatpump-1`. It is written in
 its own transaction, so a missing table never blocks temperature rows. Read by the
 cloud dashboard in [`infra/aiven/cloud/`](../infra/aiven/cloud/README.md).
+
+An additional component `local_ip` stores the UNO Q Wi-Fi IPv4 address in `message`,
+with level `ok`. When unavailable, its level is `unknown` and the message is empty.
+It uses the existing table and permissions; no schema migration is required.

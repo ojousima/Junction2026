@@ -60,6 +60,7 @@ __pycache__/
 data/*.csv
 data/*.wav
 data/*.jpg
+data/board-lan-ip
 .DS_Store
 
 # Audio datasets: keep the folder structure and README, ignore the data itself

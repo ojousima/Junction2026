@@ -1,0 +1,46 @@
+#!/bin/sh
+# NetworkManager dispatcher: share the UNO Q Wi-Fi address with the app container.
+
+[ "$1" = wlan0 ] || exit 0
+case "$2" in
+    up|dhcp4-change|down) ;;
+    *) exit 0 ;;
+esac
+
+app_dir=/home/arduino/ArduinoApps/heatpump-doctor
+ip_file="$app_dir/data/board-lan-ip"
+if [ ! -d "$app_dir" ]; then
+    logger -t heatpump-lan-ip "App directory is unavailable"
+    exit 1
+fi
+
+address=
+if [ "$2" != down ]; then
+    if ! addresses=$(/usr/sbin/ip -4 -o addr show dev wlan0 scope global); then
+        logger -p user.err -t heatpump-lan-ip "Failed to inspect Wi-Fi addresses"
+        exit 1
+    fi
+    address=$(printf '%s\n' "$addresses" | /usr/bin/awk 'NR == 1 { split($4, a, "/"); print a[1] }')
+fi
+
+if [ -z "$address" ]; then
+    if ! /usr/sbin/runuser -u arduino -- /bin/rm -f "$ip_file"; then
+        logger -p user.err -t heatpump-lan-ip "Failed to clear the LAN address"
+        exit 1
+    fi
+    logger -t heatpump-lan-ip "No Wi-Fi IPv4 address available"
+    exit 0
+fi
+
+if ! boot_id=$(/bin/cat /proc/sys/kernel/random/boot_id); then
+    logger -p user.err -t heatpump-lan-ip "Failed to read the board boot ID"
+    exit 1
+fi
+if ! /usr/sbin/runuser -u arduino -- /bin/sh -c '
+    umask 077
+    mkdir -p "$1" && printf "%s\n%s\n" "$2" "$4" > "$3.tmp" && mv -f "$3.tmp" "$3"
+' sh "$app_dir/data" "$address" "$ip_file" "$boot_id"; then
+    logger -p user.err -t heatpump-lan-ip "Failed to share the LAN address"
+    exit 1
+fi
+logger -t heatpump-lan-ip "Wi-Fi IPv4 address updated"

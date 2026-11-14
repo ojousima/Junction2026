@@ -73,12 +73,14 @@ Health check: `GET /healthz`.
   `TELEMETRY_INTERVAL_SECONDS` (default 60 s), and the app checks every
   `PUSH_POLL_SECONDS`, so an alert reaches the phone within about 1-2 minutes.
 - "Sensor offline" shows when the board has not reported for 10 minutes.
+- The status API includes `local_ip`, the board's most recently reported Wi-Fi IPv4
+  address, or `null` if unavailable. The dashboard does not display it.
 
 ## Limits (hackathon scope)
 
 - No login: anyone with the device link sees that heat pump's four statuses. The ID is a
   random-looking UUID derived from the board serial, not a secret. Add authentication
-  before real customers.
+  before real customers. The status API also exposes the board's local IP address.
 - No rate limiting on the subscribe and test-push endpoints.
 - Defrost uses frost weather (Thermo) and, once the camera publishes it, an icing score
   (`state["icing"]`, 0..1). Until then it can say "Watch" in frost weather but never "Action".
