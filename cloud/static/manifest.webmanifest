@@ -2,7 +2,6 @@
   "name": "Heat Pump Doctor",
   "short_name": "Heat Pump",
   "description": "Is my heat pump OK? Coil, fan, compressor and defrost at a glance.",
-  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f4f6f8",
