@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heat Pump Doctor</title>
+<style>
+  :root {
+    --bg: #0d1512;
+    --panel: #15211c;
+    --line: #26372f;
+    --text: #eef4f0;
+    --muted: #9fb3a9;
+    --green: #5fd38d;
+    --ice: #8fd3ff;
+    --warn: #ffb454;
+    --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #070b09; color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif; }
+  body { overflow: hidden; }
+
+  /* 1280x720 stage, scaled to fit the window */
+  #stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
+    transform-origin: center center; }
+  .slide { position: absolute; inset: 0; background: var(--bg); padding: 64px 80px 56px;
+    display: none; flex-direction: column; overflow: hidden; }
+  .slide.active { display: flex; }
+
+  .kicker { font-size: 15px; letter-spacing: .18em; text-transform: uppercase; color: var(--green);
+    font-weight: 600; margin-bottom: 14px; }
+  h1 { font-size: 64px; line-height: 1.05; font-weight: 750; letter-spacing: -.02em; }
+  h2 { font-size: 42px; line-height: 1.12; font-weight: 700; letter-spacing: -.01em; margin-bottom: 28px; }
+  h3 { font-size: 21px; font-weight: 650; margin-bottom: 10px; }
+  p, li { font-size: 19px; line-height: 1.45; color: var(--muted); }
+  strong { color: var(--text); font-weight: 650; }
+  ul { list-style: none; }
+  li { padding-left: 22px; position: relative; margin-bottom: 9px; }
+  li::before { content: ""; position: absolute; left: 0; top: .62em; width: 8px; height: 8px;
+    border-radius: 2px; background: var(--green); }
+
+  .foot { margin-top: auto; padding-top: 16px; font-size: 12.5px; color: #6f857a; line-height: 1.45; }
+  .num { position: absolute; right: 36px; bottom: 22px; font-size: 13px; color: #5c7066; }
+
+  .grid { display: grid; gap: 22px; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g4 { grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .g4 .card { padding: 22px 22px; }
+  .g4 .stat { font-size: 40px; }
+  .g4 .stat-label { font-size: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px 26px; }
+
+  .stat { font-size: 46px; font-weight: 750; letter-spacing: -.02em; color: var(--text); line-height: 1; }
+  .stat small { font-size: 22px; font-weight: 600; color: var(--muted); }
+  .stat-label { margin-top: 10px; font-size: 17px; }
+
+  /* title slide */
+  .title-slide { justify-content: center;
+    background: radial-gradient(circle at 85% 30%, rgba(95,211,141,.16), transparent 45%),
+                radial-gradient(circle at 75% 85%, rgba(143,211,255,.10), transparent 40%), var(--bg); }
+  .title-slide h1 { font-size: 88px; }
+  .title-slide .tag { font-size: 30px; color: var(--text); margin-top: 26px; max-width: 900px; line-height: 1.3; }
+  .title-slide .meta { margin-top: 48px; font-size: 17px; color: var(--muted); }
+  .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+    margin-right: 8px; font-size: 15px; color: var(--muted); background: var(--panel); }
+
+  /* impact slide */
+  .impact { display: grid; grid-template-columns: 1fr 1.35fr; gap: 26px; flex: 1; min-height: 0; }
+  .env { border-color: rgba(95,211,141,.45); background: linear-gradient(160deg, rgba(95,211,141,.10), var(--panel) 55%); }
+  .env h3 { color: var(--green); }
+  .money h3 { color: var(--warn); }
+  .calc { margin-top: 14px; padding: 14px 16px; border-radius: 10px; background: #0f1915;
+    border: 1px dashed var(--line); font-size: 16.5px; color: var(--muted); line-height: 1.5; }
+  .calc b { color: var(--warn); font-size: 22px; }
+  .env-row { display: grid; grid-template-columns: 112px 1fr; gap: 16px; align-items: start;
+    padding: 13px 0; border-top: 1px solid var(--line); }
+  .env-row:first-of-type { border-top: 0; padding-top: 4px; }
+  .env-row .big { font-size: 27px; font-weight: 750; color: var(--text); line-height: 1.1; }
+  .env-row p { font-size: 17px; }
+
+  /* solution slide */
+  .sol { display: grid; grid-template-columns: 1.15fr 1fr; gap: 36px; flex: 1; align-items: center; }
+  .sol svg { width: 100%; height: auto; }
+
+  /* diagnostics slide */
+  .diag .card { display: flex; flex-direction: column; }
+  .diag .icon { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center;
+    margin-bottom: 14px; }
+  .diag .sensor { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+  .diag li { font-size: 17px; margin-bottom: 12px; }
+  .diag .how { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); font-size: 15px; color: #7f948a; }
+  .t .sensor, .t .icon svg { color: var(--warn); }
+  .a .sensor, .a .icon svg { color: var(--green); }
+  .v .sensor, .v .icon svg { color: var(--ice); }
+  .t li::before { background: var(--warn); }
+  .v li::before { background: var(--ice); }
+  .t .icon { background: rgba(255,180,84,.12); }
+  .a .icon { background: rgba(95,211,141,.12); }
+  .v .icon { background: rgba(143,211,255,.12); }
+
+  /* user interface slide */
+  .ui .card { display: flex; flex-direction: column; gap: 16px; }
+  .ui li { font-size: 16.5px; margin-bottom: 7px; }
+  .ui-head { display: flex; align-items: center; gap: 12px; }
+  .ui-head h3 { margin: 0; font-size: 20px; }
+  .badge { font-size: 13px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .b-green { background: rgba(95,211,141,.14); color: var(--green); }
+  .b-ice { background: rgba(143,211,255,.14); color: var(--ice); }
+  .mock-phone { display: flex; flex-direction: column; gap: 8px; }
+  .notif { background: #22302a; border: 1px solid #33473e; border-radius: 12px; padding: 10px 14px; }
+  .notif.dim { opacity: .6; }
+  .notif-top { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .dot.warn { background: var(--warn); }
+  .notif-title { font-size: 16px; font-weight: 650; margin-top: 3px; }
+  .notif-body { font-size: 14.5px; color: var(--muted); line-height: 1.35; }
+  .ha { background: #1c2733; border: 1px solid #2d3d4d; border-radius: 12px; padding: 10px 16px; }
+  .ha-title { font-size: 16px; font-weight: 650; padding: 2px 0 6px; }
+  .ha-title span { color: var(--muted); font-weight: 400; }
+  .ha-row { display: flex; justify-content: space-between; font-size: 14.5px; padding: 5px 0;
+    border-top: 1px solid #2a3846; color: var(--muted); }
+  .ha-row b { color: var(--text); font-weight: 600; }
+  .ha-row b.ok { color: var(--green); }
+  .ha-row b.warn { color: var(--warn); }
+
+  /* business slides */
+  .biz h3 .sub { font-size: 14px; font-weight: 500; color: #7f948a; margin-left: 6px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 15.5px; color: var(--muted); }
+  .tbl td { padding: 5px 0; border-top: 1px solid var(--line); }
+  .tbl td:last-child { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .tbl tr:first-child td { border-top: 0; }
+  .tbl tr.total td { color: var(--text); font-weight: 700; border-top: 1px solid #3d5449; }
+  .tbl tr.total td:last-child { color: var(--warn); }
+  .plan td { text-align: right; color: var(--text); padding: 6px 0 6px 10px; font-variant-numeric: tabular-nums; }
+  .plan td:first-child { text-align: left; color: var(--muted); padding-left: 0; }
+  .plan td small { display: block; font-size: 12px; color: #7f948a; font-weight: 500; }
+  .plan tr.head td { font-weight: 700; font-size: 16px; color: var(--green); }
+  .plan tr.em td { font-weight: 650; }
+  .plan tr.profit td { font-weight: 750; font-size: 17px; color: var(--green); border-top: 1px solid #3d5449; }
+  .plan tr.profit td:first-child { color: var(--text); }
+  .plan td.neg { color: var(--bad) !important; }
+  .wf { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
+  .wf-row { display: grid; grid-template-columns: 190px 1fr 60px; gap: 12px; align-items: center; font-size: 15.5px; color: var(--muted); }
+  .wf-row b { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .wf-row .bar { height: 16px; background: #0f1915; border-radius: 4px; overflow: hidden; display: flex; }
+  .wf-row .bar i { display: block; height: 100%; background: #4a6257; border-radius: 4px; }
+  .wf-row.neg .bar i { background: rgba(255,107,107,.65); }
+  .wf-row.neg b { color: var(--bad); }
+  .wf-row.sub2 .bar i { background: var(--ice); }
+  .wf-row.gp .bar i { background: var(--green); }
+  .wf-row.gp, .wf-row.gp b { color: var(--green); font-weight: 700; }
+  .channels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; font-size: 14.5px; color: var(--muted); line-height: 1.4; }
+  .channels > div { background: #0f1915; border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; }
+  .channels b { color: var(--text); }
+  .payback { margin-top: 14px; font-size: 16px; }
+  .bars { display: flex; align-items: flex-end; gap: 22px; height: 64px; margin-top: 10px; }
+  .biz h2 { margin-bottom: 22px; }
+  .channels strong { white-space: nowrap; }
+  .bcol { display: flex; flex-direction: column; align-items: center; height: 100%; width: 56px; }
+  .bstack { flex: 1; width: 100%; display: flex; align-items: flex-end; gap: 4px; }
+  .bstack i { display: block; flex: 1; border-radius: 3px 3px 0 0; min-height: 2px; }
+  .bcol span { font-size: 12px; color: #7f948a; margin-top: 4px; }
+  i.r { background: var(--ice); } i.g { background: var(--green); }
+  .blegend { margin-left: auto; align-self: center; display: flex; gap: 16px; font-size: 13px; color: var(--muted); }
+  .blegend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+  .steps { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; }
+  .steps div { font-size: 14.5px; color: var(--muted); line-height: 1.4; }
+  .steps b { display: block; color: var(--text); font-size: 15.5px; }
+  .pro { border-color: rgba(143,211,255,.4); padding: 18px 20px; }
+  .pro h3 { font-size: 17px; }
+  .pro li { font-size: 14.5px; margin-bottom: 5px; }
+  .pro li::before { background: var(--ice); }
+
+  /* nav hint */
+  #hint { position: fixed; left: 16px; bottom: 12px; font-size: 12px; color: #4f6158; }
+
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { background: var(--bg); overflow: visible; }
+    #stage { position: static; transform: none !important; }
+    .slide { position: relative; display: flex !important; width: 1280px; height: 720px;
+      page-break-after: always; break-after: page; }
+    #hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1. Title -->
+<section class="slide title-slide">
+  <div class="kicker">Junction 2026 · Arduino challenge</div>
+  <h1>Heat Pump Doctor</h1>
+  <p class="tag">Your heat pump loses efficiency silently. We hear it before your electricity bill does.</p>
+  <div class="meta">
+    <span class="pill">Arduino UNO Q</span><span class="pill">Edge AI, fully offline</span><span class="pill">Plug-and-play retrofit</span>
+  </div>
+  <div class="num">1</div>
+</section>
+
+<!-- 2. Problem -->
+<section class="slide">
+  <div class="kicker">The problem</div>
+  <h2>Millions of heat pumps and ACs run outdoors,<br>unattended, until they fail</h2>
+  <div class="grid g4">
+    <div class="card">
+      <div class="stat">1.2 M<small>+</small></div>
+      <p class="stat-label">heat pumps in use in Finland, producing about <strong>one fifth</strong> of building heat</p>
+    </div>
+    <div class="card">
+      <div class="stat">~10 %</div>
+      <p class="stat-label">of world electricity goes to space cooling, and about <strong>30 % of peak demand</strong></p>
+    </div>
+    <div class="card">
+      <div class="stat">200 M</div>
+      <p class="stat-label">air conditioners shipped worldwide in 2024 alone, most never monitored</p>
+    </div>
+    <div class="card">
+      <div class="stat">€140 B<small>/yr</small></div>
+      <p class="stat-label">equipment market in 2024: <strong style="white-space:nowrap">≈ €90 B+</strong> ACs, <strong style="white-space:nowrap">≈ €45 B</strong> heat pumps</p>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:26px">
+    <ul>
+      <li><strong>Slow drift:</strong> dirt, leaves and pollen clog the outdoor coil. Efficiency falls a little every month. Nobody notices.</li>
+      <li><strong>Failed defrost:</strong> ice stays on the coil in winter and the unit falls back to direct electric heating.</li>
+    </ul>
+    <ul>
+      <li><strong>Mechanical faults:</strong> a twig in the fan, a worn bearing or an unbalanced blade, heard only when it is already loud.</li>
+      <li><strong>No feedback:</strong> the owner sees only a higher bill, or a cold house on the coldest night of the year.</li>
+    </ul>
+  </div>
+  <div class="foot">Sources: SULPU via Yrittäjät (2022); IEA Space Cooling briefing; IEA, The Future of Cooling; IEA heat pump market ≈ USD 50 B (2024); AC market USD 99–200 B depending on analyst (Grand View Research low end used), converted at ≈ 0.9 €/USD.</div>
+  <div class="num">2</div>
+</section>
+
+<!-- 3. Impact -->
+<section class="slide">
+  <div class="kicker">The impact</div>
+  <h2>Hidden losses cost money, and cost the climate more</h2>
+  <div class="impact">
+    <div class="card money">
+      <h3>Financial</h3>
+      <ul>
+        <li>Faults can raise heating and cooling energy use by <strong>up to ~30 %</strong> (NIST).</li>
+        <li>A missed fault turns a cheap cleaning into a <strong>compressor or fan motor</strong> repair.</li>
+        <li>Breakdowns hit in mid-winter, when service is slowest and backup heat is most expensive.</li>
+      </ul>
+      <div class="calc">
+        Example house: 10 000 kWh/yr heat-pump electricity<br>
+        × 15 % efficiency loss × 0.15 €/kWh<br>
+        ≈ <b>225 € / year</b>, per house, unnoticed
+      </div>
+    </div>
+    <div class="card env">
+      <h3>Environmental</h3>
+      <div class="env-row">
+        <div class="big">kWh</div>
+        <p><strong>Wasted electricity is wasted CO₂.</strong> Peaks are covered by fossil reserve plants, and dirty coils and ice push demand up exactly at the cold, high-carbon peak hours.</p>
+      </div>
+      <div class="env-row">
+        <div class="big">COP 1</div>
+        <p><strong>Failed defrost or breakdown means resistive backup.</strong> The same heat then needs about 3× more electricity than a healthy heat pump.</p>
+      </div>
+      <div class="env-row">
+        <div class="big">2 t</div>
+        <p><strong>CO₂e per kg of leaked R410A</strong> (GWP 2088). Units that run hot under fault stress their seals and joints. Early warning keeps refrigerant inside.</p>
+      </div>
+      <div class="env-row">
+        <div class="big">Life</div>
+        <p><strong>Longer equipment life.</strong> Each premature replacement adds manufacturing emissions and e-waste.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Sources: Domanski et al., NIST TN 1848 (2014); IPCC AR4 GWP for R410A; EU F-gas Regulation (EU) 2024/573. The 225 € example is our own estimate.</div>
+  <div class="num">3</div>
+</section>
+
+<!-- 4. Solution -->
+<section class="slide">
+  <div class="kicker">The solution</div>
+  <h2>Plug-and-play sensor box under the outdoor unit</h2>
+  <div class="sol">
+    <svg viewBox="0 0 560 420" role="img" aria-label="Outdoor unit with the sensor box underneath and two temperature probes on both sides of the coil">
+      <defs>
+        <pattern id="fins" width="7" height="10" patternUnits="userSpaceOnUse">
+          <rect width="7" height="10" fill="#1b2a24"/>
+          <line x1="3.5" y1="0" x2="3.5" y2="10" stroke="#3a5146" stroke-width="1.4"/>
+        </pattern>
+      </defs>
+      <!-- ground / wall bracket -->
+      <line x1="40" y1="368" x2="520" y2="368" stroke="#2c3d35" stroke-width="3"/>
+      <rect x="110" y="300" width="14" height="68" fill="#2c3d35"/>
+      <rect x="400" y="300" width="14" height="68" fill="#2c3d35"/>
+      <!-- outdoor unit body -->
+      <rect x="80" y="70" width="380" height="230" rx="10" fill="#1f2e28" stroke="#4a6257" stroke-width="2"/>
+      <!-- coil (heat exchanger) on the rear/side -->
+      <rect x="92" y="82" width="56" height="206" rx="4" fill="url(#fins)" stroke="#4a6257"/>
+      <text x="120" y="60" fill="#9fb3a9" font-size="14" text-anchor="middle">coil</text>
+      <!-- fan grille -->
+      <circle cx="290" cy="185" r="92" fill="#16221d" stroke="#4a6257" stroke-width="2"/>
+      <circle cx="290" cy="185" r="70" fill="none" stroke="#33473e"/>
+      <circle cx="290" cy="185" r="48" fill="none" stroke="#33473e"/>
+      <g fill="#3d5449">
+        <path d="M290 185 C 300 140, 330 130, 340 150 C 330 165, 310 175, 290 185Z"/>
+        <path d="M290 185 C 330 200, 335 232, 315 240 C 300 228, 292 208, 290 185Z"/>
+        <path d="M290 185 C 255 210, 225 205, 225 183 C 245 175, 268 178, 290 185Z"/>
+      </g>
+      <circle cx="290" cy="185" r="9" fill="#5c7469"/>
+      <!-- air flow arrows -->
+      <g stroke="#8fd3ff" stroke-width="2.4" fill="none" opacity=".75">
+        <path d="M30 140 h44"/><path d="M64 133 l10 7 -10 7"/>
+        <path d="M30 230 h44"/><path d="M64 223 l10 7 -10 7"/>
+      </g>
+      <text x="22" y="118" fill="#8fd3ff" font-size="13">air in</text>
+      <g stroke="#ffb454" stroke-width="2.4" fill="none" opacity=".8">
+        <path d="M470 150 h50"/><path d="M510 143 l10 7 -10 7"/>
+        <path d="M470 220 h50"/><path d="M510 213 l10 7 -10 7"/>
+      </g>
+      <text x="474" y="128" fill="#ffb454" font-size="13">air out</text>
+
+      <!-- sensor box under the unit -->
+      <rect x="208" y="318" width="150" height="44" rx="8" fill="#123a26" stroke="#5fd38d" stroke-width="2"/>
+      <text x="283" y="345" fill="#eef4f0" font-size="15" font-weight="600" text-anchor="middle">UNO Q box</text>
+      <!-- camera + mic on the box -->
+      <circle cx="350" cy="318" r="0" />
+      <!-- magnets on box -->
+      <rect x="220" y="310" width="20" height="8" rx="2" fill="#ff6b6b"/>
+      <rect x="326" y="310" width="20" height="8" rx="2" fill="#ff6b6b"/>
+
+      <!-- probe wire 1: inlet side of coil -->
+      <path d="M215 340 C 150 340, 70 330, 70 250 L 70 186" fill="none" stroke="#8fd3ff" stroke-width="2.5" stroke-dasharray="1 0"/>
+      <circle cx="70" cy="180" r="8" fill="#8fd3ff"/>
+      <rect x="63" y="190" width="14" height="6" rx="1.5" fill="#ff6b6b"/>
+      <!-- probe wire 2: outlet side, in front of fan -->
+      <path d="M352 340 C 420 340, 440 320, 440 280 L 440 262" fill="none" stroke="#ffb454" stroke-width="2.5"/>
+      <circle cx="440" cy="256" r="8" fill="#ffb454"/>
+      <rect x="433" y="266" width="14" height="6" rx="1.5" fill="#ff6b6b"/>
+
+      <!-- legend -->
+      <rect x="40" y="392" width="14" height="6" rx="1.5" fill="#ff6b6b"/>
+      <text x="62" y="399" fill="#9fb3a9" font-size="13">magnet mount, no tools</text>
+      <circle cx="250" cy="395" r="6" fill="#8fd3ff"/><circle cx="266" cy="395" r="6" fill="#ffb454"/>
+      <text x="280" y="399" fill="#9fb3a9" font-size="13">temperature probes, both sides of coil</text>
+    </svg>
+    <div>
+      <ul>
+        <li><strong>Sits under the outdoor unit.</strong> Camera and microphone look and listen at the fan and coil.</li>
+        <li><strong>Two wired probes</strong>, one on each side of the coil: air in and air out. The temperature gradient across the coil is the health signal.</li>
+        <li><strong>All magnet attachments.</strong> No drilling, no tools, no refrigerant work, no warranty risk. Install in 5 minutes.</li>
+        <li><strong>Brand-agnostic retrofit</strong> for any heat pump or AC, old or new.</li>
+        <li><strong>Edge AI on Arduino UNO Q.</strong> All analysis runs on the device. No cloud backend: raw audio and images never leave the house.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">4</div>
+</section>
+
+<!-- 5. Diagnostics -->
+<section class="slide diag">
+  <div class="kicker">The diagnostics</div>
+  <h2>Three senses, one health score</h2>
+  <div class="grid g3" style="flex:1; min-height:0">
+    <div class="card t">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0Z"/></svg></div>
+      <div class="sensor">Thermal</div>
+      <h3>Dirty coil, weak defrost</h3>
+      <ul>
+        <li><strong>Coil fouling:</strong> temperature gradient across the coil drifts away from the healthy value at the same operating point.</li>
+        <li><strong>Defrost not effective:</strong> gradient does not recover after a defrost cycle.</li>
+        <li>Slow trend tracked over weeks, with an uncertainty band.</li>
+      </ul>
+      <div class="how">Healthy model per operating point, Kalman filter fouling estimate, CUSUM alarm</div>
+    </div>
+    <div class="card a">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h0"/></svg></div>
+      <div class="sensor">Audio</div>
+      <h3>Fan and motor faults</h3>
+      <ul>
+        <li><strong>Object touching the fan:</strong> twig, leaf or ice scraping the blades, a ticking at blade-pass rate.</li>
+        <li><strong>Bearing wear:</strong> rising high-frequency noise and new harmonics.</li>
+        <li><strong>Imbalance:</strong> strong peak at the rotation frequency, rattle and vibration.</li>
+      </ul>
+      <div class="how">16 kHz audio, FFT band energies, on-device anomaly model</div>
+    </div>
+    <div class="card v">
+      <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M4.9 4.9l14.2 14.2M2 12h20M4.9 19.1 19.1 4.9"/></svg></div>
+      <div class="sensor">Visual</div>
+      <h3>Ice and snow</h3>
+      <ul>
+        <li><strong>Ice on the coil</strong> that defrost does not clear.</li>
+        <li><strong>Snow build-up</strong> blocking the intake or fan grille.</li>
+        <li><strong>Ice on the fan</strong>, cross-checked with the audio channel.</li>
+      </ul>
+      <div class="how">USB camera, periodic frame, icing and frost score</div>
+    </div>
+  </div>
+  <div class="num">5</div>
+</section>
+
+<!-- 6. User interface -->
+<section class="slide ui">
+  <div class="kicker">The user interface</div>
+  <h2>Alerts where you already are</h2>
+  <div class="grid g2" style="flex:1; min-height:0; gap:28px">
+    <div class="card">
+      <div class="ui-head"><span class="badge b-green">Web push</span><h3>From your browser, no app to install</h3></div>
+      <div class="mock-phone">
+        <div class="notif">
+          <div class="notif-top"><span class="dot"></span>Heat Pump Doctor · now</div>
+          <div class="notif-title">Outdoor coil is getting dirty</div>
+          <div class="notif-body">Coil fouling 35 % ± 8 %. Costing about 15 € / month. Rinse the coil with a garden hose.</div>
+        </div>
+        <div class="notif dim">
+          <div class="notif-top"><span class="dot warn"></span>Heat Pump Doctor · 2 d ago</div>
+          <div class="notif-title">Scraping noise in the fan</div>
+          <div class="notif-body">Something may be touching the blades. Check for leaves or ice.</div>
+        </div>
+      </div>
+      <ul>
+        <li>Open the box's local dashboard, tap <strong>Allow notifications</strong>. Done: no app store, no account.</li>
+        <li>Dashboard shows live spectrum, health score and fouling trend ± uncertainty.</li>
+        <li>Push messages are encrypted end-to-end.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="ui-head"><span class="badge b-ice">Home Assistant</span><h3>Native smart-home integration</h3></div>
+      <div class="ha">
+        <div class="ha-title">Heat Pump Doctor <span>· outdoor unit</span></div>
+        <div class="ha-row"><span>Health score</span><b class="ok">82 / 100</b></div>
+        <div class="ha-row"><span>Coil fouling</span><b class="warn">35 %</b></div>
+        <div class="ha-row"><span>Coil ΔT (in → out)</span><b>4.1 °C</b></div>
+        <div class="ha-row"><span>Ice on coil</span><b class="ok">No</b></div>
+        <div class="ha-row"><span>Last sound fault</span><b>Fan scraping, 2 d ago</b></div>
+      </div>
+      <ul>
+        <li>Shows up automatically via <strong>MQTT discovery</strong>: one device, ready-made sensors.</li>
+        <li>Use in automations: notify the family, book a service, shift heating to cheap-electricity hours.</li>
+        <li>Fully local, works without internet.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">6</div>
+</section>
+
+<!-- 7. Business model: unit economics -->
+<section class="slide biz">
+  <div class="kicker">Business model</div>
+  <h2>Retrofit device sale: €249, installed in 5 minutes</h2>
+  <div class="grid" style="grid-template-columns: 1fr 1.05fr; gap: 28px; flex:1; min-height:0">
+    <div class="card">
+      <h3>Bill of materials <span class="sub">at 1 000 units</span></h3>
+      <table class="tbl">
+        <tr><td>Arduino UNO Q 2 GB (edge AI + MCU)</td><td>€38</td></tr>
+        <tr><td>USB camera with microphone</td><td>€9</td></tr>
+        <tr><td>2 × waterproof coil temperature probes</td><td>€4</td></tr>
+        <tr><td>Ambient temperature + humidity sensor</td><td>€4</td></tr>
+        <tr><td>IP65 enclosure with camera window</td><td>€6</td></tr>
+        <tr><td>Outdoor 5 V power supply, 5 m cable</td><td>€5</td></tr>
+        <tr><td>6 × neodymium pot magnets</td><td>€3</td></tr>
+        <tr><td>Cables, connectors, adapter board</td><td>€3</td></tr>
+        <tr><td>Buzzer, status LED</td><td>€1</td></tr>
+        <tr class="total"><td>BOM</td><td>€73</td></tr>
+        <tr><td>Manufacturing: assembly, flashing, end-of-line test</td><td>€8</td></tr>
+        <tr><td>Packaging, logistics, 3 % warranty reserve</td><td>€7</td></tr>
+        <tr class="total"><td>COGS per unit</td><td>€88</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Per unit, partner channel <span class="sub">worst case</span></h3>
+      <div class="wf">
+        <div class="wf-row"><span>Retail price incl. VAT</span><div class="bar"><i style="width:100%"></i></div><b>€249</b></div>
+        <div class="wf-row neg"><span>VAT 25.5 %</span><div class="bar"><i style="width:20.5%; margin-left:79.5%"></i></div><b>−€51</b></div>
+        <div class="wf-row neg"><span>Channel commission 30 %</span><div class="bar"><i style="width:23.9%; margin-left:55.8%"></i></div><b>−€60</b></div>
+        <div class="wf-row sub2"><span>Our revenue</span><div class="bar"><i style="width:55.8%"></i></div><b>€139</b></div>
+        <div class="wf-row neg"><span>COGS</span><div class="bar"><i style="width:35.3%; margin-left:20.4%"></i></div><b>−€88</b></div>
+        <div class="wf-row gp"><span>Gross profit (37 %)</span><div class="bar"><i style="width:20.4%"></i></div><b>€51</b></div>
+      </div>
+      <div class="channels">
+        <div><b>Partner channel</b><br>energy companies, hardware stores, HVAC installers. 30 % commission. Gross profit <strong>€51</strong> (37 %).</div>
+        <div><b>Direct web shop</b><br>about €10 payment and shipping. Gross profit <strong>€100</strong> (53 %).</div>
+      </div>
+      <p class="payback">For the owner: pays back in about <strong>1 year</strong> from the ~225 €/yr efficiency loss it catches.</p>
+    </div>
+  </div>
+  <div class="foot">All prices are our estimates excluding VAT unless marked. UNO Q priced near volume list price; later cost-down to a custom carrier board is possible.</div>
+  <div class="num">7</div>
+</section>
+
+<!-- 8. Go-to-market and growth -->
+<section class="slide biz">
+  <div class="kicker">Go-to-market</div>
+  <h2>Local launch in Finland, then rapid growth</h2>
+  <div class="grid" style="grid-template-columns: 1.55fr 1fr; gap: 26px; flex:1; min-height:0">
+    <div class="card">
+      <table class="tbl plan">
+        <tr class="head"><td></td><td>Year 1<small>Finland</small></td><td>Year 2<small>Nordics</small></td><td>Year 3<small>EU</small></td></tr>
+        <tr><td>Units sold</td><td>3 000</td><td>20 000</td><td>100 000</td></tr>
+        <tr><td>Sales direct / partner</td><td>70 / 30 %</td><td>50 / 50 %</td><td>30 / 70 %</td></tr>
+        <tr><td>COGS per unit</td><td>€88</td><td>€80</td><td>€70</td></tr>
+        <tr class="em"><td>Revenue</td><td>€0.52 M</td><td>€3.3 M</td><td>€15.4 M</td></tr>
+        <tr><td>COGS</td><td>€0.26 M</td><td>€1.6 M</td><td>€7.0 M</td></tr>
+        <tr class="em"><td>Gross profit</td><td>€0.26 M<small>49 %</small></td><td>€1.7 M<small>51 %</small></td><td>€8.4 M<small>54 %</small></td></tr>
+        <tr><td>Operating costs</td><td>€0.40 M</td><td>€1.2 M</td><td>€4.5 M</td></tr>
+        <tr class="profit"><td>Operating profit</td><td class="neg">−€0.14 M</td><td>€0.47 M</td><td>€3.9 M</td></tr>
+      </table>
+      <div class="bars">
+        <div class="bcol"><div class="bstack"><i class="r" style="height:3.4%"></i><i class="g" style="height:1.7%"></i></div><span>Y1</span></div>
+        <div class="bcol"><div class="bstack"><i class="r" style="height:21.3%"></i><i class="g" style="height:10.9%"></i></div><span>Y2</span></div>
+        <div class="bcol"><div class="bstack"><i class="r" style="height:100%"></i><i class="g" style="height:54.5%"></i></div><span>Y3</span></div>
+        <div class="blegend"><span><i class="r"></i>Revenue</span><span><i class="g"></i>Gross profit</span></div>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:18px">
+      <div class="card steps">
+        <div><b>Y1 · Finland</b> 3 000 units = 0.25 % of 1.2 M+ heat pumps. Pro users first, sold direct.</div>
+        <div><b>Y2 · Nordics</b> Same climate, same frost problem. Energy company and installer partners join.</div>
+        <div><b>Y3 · EU</b> 2.5 M+ heat pumps sold per year in Europe. Partners carry volume.</div>
+      </div>
+      <div class="card pro">
+        <span class="badge b-ice">Entry segment: Pro users</span>
+        <h3 style="margin-top:10px">Energy-aware homeowners, simple home automation</h3>
+        <ul>
+          <li>Watch spot prices, run Home Assistant or smart plugs.</li>
+          <li>Self-install, buy direct: <strong>€100 gross profit</strong> / unit.</li>
+          <li>Loud early adopters: forums, reviews, neighbours.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Our estimates. Our revenue per unit: €188 direct, €139 via partners (30 % commission), blended by the yearly sales mix. Europe sales: EHPA, 2.56 M units in 2024.</div>
+  <div class="num">8</div>
+</section>
+
+</div>
+<div id="hint">← → or click to navigate · P to print / save as PDF</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const stage = document.getElementById('stage');
+  let i = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) show(i + 1);
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) show(i - 1);
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'p') print();
+  });
+  addEventListener('click', e => show(e.clientX < innerWidth / 3 ? i - 1 : i + 1));
+  fit(); show(i);
+</script>
+</body>
+</html>
