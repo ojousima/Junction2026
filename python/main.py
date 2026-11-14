@@ -9,6 +9,7 @@ import os
 import threading
 import time
 from collections import deque
+from datetime import datetime, timezone
 
 import alsaaudio
 import cv2
@@ -17,6 +18,8 @@ from fastapi import Response
 
 from arduino.app_bricks.web_ui import WebUI
 from arduino.app_utils import App, Bridge
+
+import telemetry
 
 MIC_DEVICE = "plughw:CARD=Camera,DEV=0"
 CAM_GLOB = "/dev/v4l/by-id/usb-*-video-index0"  # /dev/videoN number changes between boots
@@ -38,6 +41,7 @@ state = {
 }
 history = deque(maxlen=HISTORY_S)  # (t, temp_c, rh, rms_dbfs, peak_hz)
 latest_jpeg = None
+sample_times = {"thermo": None}
 
 
 # --- Thermo over Bridge -------------------------------------------------------
@@ -45,12 +49,14 @@ def on_env(temp_c, rh):
     with lock:
         state["temp_c"] = round(float(temp_c), 2)
         state["rh"] = round(float(rh), 1)
+        sample_times["thermo"] = datetime.now(timezone.utc)
 
 
 def on_sensor_error(name):
     if name == "thermo":
         with lock:
             state.update(temp_c=None, rh=None)
+            sample_times["thermo"] = None
     print(f"sensor not found: {name}")
 
 
@@ -169,11 +175,18 @@ def api_frame():
     return Response(content=jpg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
+def telemetry_snapshot():
+    with lock:
+        return dict(state), dict(sample_times)
+
+
 ui = WebUI()
 ui.expose_api("GET", "/api/state", api_state)
 ui.expose_api("GET", "/api/frame.jpg", api_frame)
 
 for target in (mic_loop, cam_loop, log_loop):
     threading.Thread(target=target, daemon=True).start()
+
+threading.Thread(target=telemetry.run, args=(telemetry_snapshot,), daemon=True).start()
 
 App.run()

@@ -11,6 +11,8 @@ Edge-AI retrofit sensor that hears heat pump faults and slow efficiency loss (co
 - `infra/aiven/`: Terraform configuration and import instructions for Aiven services
 
 Setup and toolchain: see [SETUP.md](SETUP.md). Architecture and plan: see [CLAUDE.md](CLAUDE.md).
+The database contract and device telemetry setup are documented in
+[schema/](schema/) and [SETUP.md](SETUP.md#cloud-telemetry).
 
 CI builds the UNO Q sketch and checks Python syntax on a CRACI runner. The repository must be
 connected to CRACI for the `craci` runner label to be available. Hardware and App Lab runtime
