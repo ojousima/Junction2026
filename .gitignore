@@ -70,3 +70,15 @@ data/audio/**
 
 # Camera and mic smoke-test captures from the board
 data/smoke/
+
+# Terraform state and local working files can contain credentials.
+.env
+.env.*
+aiven-ca.pem
+!.env.example
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log

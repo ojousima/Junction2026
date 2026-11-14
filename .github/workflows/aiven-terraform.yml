@@ -1,0 +1,87 @@
+name: Aiven Terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/aiven/**"
+      - ".github/workflows/aiven-terraform.yml"
+  pull_request:
+    paths:
+      - "infra/aiven/**"
+      - ".github/workflows/aiven-terraform.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aiven-terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: infra/aiven
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.2"
+      - run: terraform fmt -check
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate -no-color
+
+  apply:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    env:
+      AIVEN_TOKEN: ${{ secrets.AIVEN_TOKEN }}
+      PGHOST: pg-1ad8c70c-junction2026.f.aivencloud.com
+      PGPORT: "15419"
+      PGDATABASE: terraform_state
+      PGUSER: terraform_state
+      PGPASSWORD: ${{ secrets.TERRAFORM_STATE_PASSWORD }}
+      PGSSLMODE: verify-full
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.2"
+          terraform_wrapper: false
+      - name: Configure CA certificate
+        env:
+          AIVEN_CA_CERT: ${{ secrets.AIVEN_CA_CERT }}
+        run: |
+          test -n "$AIVEN_TOKEN" || { echo "Missing AIVEN_TOKEN secret" >&2; exit 1; }
+          test -n "$PGPASSWORD" || { echo "Missing TERRAFORM_STATE_PASSWORD secret" >&2; exit 1; }
+          test -n "$AIVEN_CA_CERT" || { echo "Missing AIVEN_CA_CERT secret" >&2; exit 1; }
+          umask 077
+          printf '%s\n' "$AIVEN_CA_CERT" > "$RUNNER_TEMP/aiven-ca.pem"
+          printf 'PGSSLROOTCERT=%s\n' "$RUNNER_TEMP/aiven-ca.pem" >> "$GITHUB_ENV"
+      - run: terraform init -input=false -no-color -lockfile=readonly
+      - name: Verify existing resources are imported
+        run: |
+          terraform state list > "$RUNNER_TEMP/aiven-state-resources"
+          for resource in aiven_pg.postgres aiven_grafana.grafana aiven_service_integration.grafana_postgres; do
+            grep -Fxq "$resource" "$RUNNER_TEMP/aiven-state-resources" || {
+              echo "Missing resource in shared Terraform state: $resource" >&2
+              exit 1
+            }
+          done
+      - name: Plan and apply
+        run: |
+          terraform plan -input=false -no-color -out="$RUNNER_TEMP/aiven.tfplan"
+          terraform show -json "$RUNNER_TEMP/aiven.tfplan" | python3 -c '
+          import json, sys
+          plan = json.load(sys.stdin)
+          blocked = [r["address"] for r in plan.get("resource_changes", []) if any(action in {"create", "delete"} for action in r["change"]["actions"])]
+          if blocked:
+              print("Automatic apply refuses creations, deletions or replacements: " + ", ".join(blocked), file=sys.stderr)
+              sys.exit(1)
+          '
+          terraform apply -input=false -no-color "$RUNNER_TEMP/aiven.tfplan"
