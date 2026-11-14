@@ -113,6 +113,21 @@
   .rows div + div { border-top: 1px solid #2a3846; }
   .rows b { font-weight: 650; } .ok { color: var(--green); } .watch { color: var(--warn); }
   .one { font-size: 18px; color: var(--muted); }
+  .ui h2 { margin-bottom: 22px; }
+  .ui .card { gap: 12px; padding: 20px 24px; }
+  .pair { display: flex; gap: 14px; align-items: center; font-size: 15.5px; line-height: 1.35; color: var(--muted); }
+  .pair svg { width: 40px; height: 40px; flex: none; color: var(--text); }
+  .pair b { color: var(--text); }
+  .ui .rows div { padding: 5px 0; }
+  .trust { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+  .trust div { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+  .trust div.aiven { flex: 1.7; border-color: rgba(143,211,255,.5); }
+  .trust b { display: block; font-size: 16px; }
+  .trust span { display: block; font-size: 13.5px; line-height: 1.3; color: var(--muted); margin-top: 2px; }
+  .trust i { width: 18px; height: 2px; background: #4a6257; position: relative; flex: none; }
+  .trust i::after { content: ""; position: absolute; right: -2px; top: -4px; border: 5px solid transparent; border-left-color: #4a6257; }
+  .cra { margin-top: 12px; font-size: 14.5px; color: var(--muted); }
+  .cra b { color: var(--green); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; margin-right: 8px; }
 
   /* 7 business */
   .biz h2 { margin-bottom: 28px; }
@@ -133,6 +148,18 @@
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
   .duo div { background: #0f1915; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 15px; color: var(--muted); }
   .duo b { display: block; font-size: 30px; color: var(--green); margin-top: 2px; }
+  .value { display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 14px; margin-top: 16px; }
+  .value div { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; }
+  .value span { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.3; }
+  .value b { display: block; font-size: 24px; letter-spacing: -.01em; margin: 1px 0 2px; }
+  .value .us { border-color: rgba(95,211,141,.55); background: linear-gradient(160deg, rgba(95,211,141,.12), var(--panel) 60%); }
+  .value .us b { color: var(--green); }
+  .biz h2 { margin-bottom: 20px; }
+  .biz .card { padding: 18px 24px; }
+  .biz h3 { margin-bottom: 8px; }
+  .biz .tbl { font-size: 17px; } .biz .tbl td { padding: 5px 0; }
+  .biz .wf { gap: 8px; }
+  .biz .duo { margin-top: 14px; } .biz .duo div { padding: 9px 14px; } .biz .duo b { font-size: 26px; }
 
   /* 8 growth */
   .plan { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -187,6 +214,10 @@
   .meter i { display: block; height: 100%; border-radius: 5px; }
   .fv { font-size: 15px; font-variant-numeric: tabular-nums; } .fv.bad { color: var(--bad); }
 
+  .crew .card { padding: 16px 16px 20px; display: flex; flex-direction: column; }
+  .crew img { display: block; width: 100%; height: 270px; object-fit: cover; object-position: center 25%; border-radius: 10px; }
+  .crew b { font-size: 26px; margin: 14px 4px 0; }
+  .crew span { font-size: 14px; letter-spacing: .1em; text-transform: uppercase; font-weight: 650; color: var(--green); margin: 4px 4px 0; }
   #hint { position: fixed; left: 16px; bottom: 12px; font-size: 12px; color: #4f6158; }
 
   @media print {
@@ -206,7 +237,7 @@
   <div class="kicker">Junction 2026 · Arduino challenge</div>
   <h1>Heat Pump Doctor</h1>
   <p class="tag">Your heat pump loses efficiency silently. We hear it before your electricity bill does.</p>
-  <div class="pills"><span class="pill">Arduino UNO Q</span><span class="pill">Edge AI</span><span class="pill">Plug-and-play retrofit</span></div>
+  <div class="pills"><span class="pill">Arduino UNO Q</span><span class="pill">Edge AI</span><span class="pill">Plug-and-play retrofit</span><span class="pill">Secure EU cloud on Aiven</span></div>
   <div class="num">1</div>
 </section>
 
@@ -340,7 +371,7 @@
       <div>2 · Slip tiny mic in at the base<span>· hears fan, compressor</span></div>
       <div>3 · Clip probe on a fin<span>· stick air probe on</span></div>
       <div>4 · Plug in<span>· learns your unit in 2 min</span></div>
-      <div class="sub-note">No tools, no refrigerant work. Any brand. Raw data stays home.</div>
+      <div class="sub-note">No tools, no refrigerant work. Any brand. Raw sound never leaves home.</div>
     </div>
   </div>
   <div class="num">4</div>
@@ -447,7 +478,7 @@
 <!-- 6. User interface -->
 <section class="slide ui">
   <div class="kicker">The user interface</div>
-  <h2>Alerts where you already are</h2>
+  <h2>Alerts where you are. Data where it's safe.</h2>
   <div class="grid g2" style="gap:28px">
     <div class="card">
       <div class="ui-head"><span class="badge b-green">Web push</span><h3>Any phone browser</h3></div>
@@ -462,7 +493,7 @@
         <div><span>Compressor</span><b class="ok">OK</b></div>
         <div><span>Defrost</span><b class="ok">OK</b></div>
       </div>
-      <div class="one">No app store, no account.</div>
+      <div class="pair"><svg viewBox="0 0 21 21" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2z M14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3z M0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2z M9 0h2v2H9z M9 3h1v3H9z M12 9h3v1h-3z M8 8h2v2H8z M16 9h2v2h-2z M19 8h2v1h-2z M9 12h1v3H9z M11 14h2v2h-2z M14 12h2v2h-2z M17 14h4v1h-4z M15 17h2v4h-2z M19 17h2v2h-2z M11 18h3v1h-3z M9 19h1v2H9z M0 9h2v1H0z M3 9h3v2H3z M2 12h3v1H2z"/></svg><span><b>No account: QR pairing.</b> Scan the code on the box, allow alerts, done. No email, no password.</span></div>
     </div>
     <div class="card">
       <div class="ui-head"><span class="badge b-ice">Home Assistant</span><h3>Smart-home native</h3></div>
@@ -475,13 +506,20 @@
       <div class="one">Auto-discovered over MQTT. Fully local.</div>
     </div>
   </div>
+  <div class="trust">
+    <div><b>UNO Q · your home</b><span>raw sound, temperatures stay here</span></div><i></i>
+    <div class="aiven"><b>Aiven · EU, Finland</b><span>4 statuses only. Run history shows when you're home: encrypted, ISO 27001, SOC 2</span></div><i></i>
+    <div><b>Your phone</b><span>paired by QR, no name or email stored</span></div>
+  </div>
+  <div class="cra"><b>CRA-ready</b> secure by default · insert-only device key · TLS verified both ends · vulnerability reporting · updates + SBOM</div>
+  <div class="foot">Aiven PostgreSQL + Runtime, europe-north1 · SOC 2 Type II, ISO 27001, GDPR · CRA (EU) 2024/2847: reporting since 11 Sep 2026, all rules 11 Dec 2027</div>
   <div class="num">6</div>
 </section>
 
 <!-- 7. Business model -->
 <section class="slide biz">
   <div class="kicker">Business model</div>
-  <h2>Retrofit device: €249</h2>
+  <h2>€179 once. Edge AI checks it every second.</h2>
   <div class="grid" style="grid-template-columns: 1fr 1.1fr; gap: 28px; flex:1; min-height:0">
     <div class="card">
       <h3>Cost per unit</h3>
@@ -496,22 +534,27 @@
       </table>
     </div>
     <div class="card">
-      <h3>Where €249 goes <span style="font-size:14px; color:var(--dim); font-weight:500">via partner</span></h3>
+      <h3>Where €179 goes <span style="font-size:14px; color:var(--dim); font-weight:500">Pro user, direct</span></h3>
       <div class="wf">
-        <div class="wf-row"><span>Retail price</span><div class="bar"><i style="width:100%"></i></div><b>€249</b></div>
-        <div class="wf-row neg"><span>VAT 25.5 %</span><div class="bar"><i style="width:20.5%; margin-left:79.5%"></i></div><b>−€51</b></div>
-        <div class="wf-row neg"><span>Partner 30 %</span><div class="bar"><i style="width:23.9%; margin-left:55.8%"></i></div><b>−€60</b></div>
-        <div class="wf-row rev"><span>Our revenue</span><div class="bar"><i style="width:55.8%"></i></div><b>€139</b></div>
-        <div class="wf-row neg"><span>COGS</span><div class="bar"><i style="width:32.9%; margin-left:22.9%"></i></div><b>−€82</b></div>
-        <div class="wf-row gp"><span>Gross profit</span><div class="bar"><i style="width:22.9%"></i></div><b>€57</b></div>
+        <div class="wf-row"><span>Retail price</span><div class="bar"><i style="width:100%"></i></div><b>€179</b></div>
+        <div class="wf-row neg"><span>VAT 25.5 %</span><div class="bar"><i style="width:20.3%; margin-left:79.7%"></i></div><b>−€36</b></div>
+        <div class="wf-row neg"><span>Shipping, payment</span><div class="bar"><i style="width:5.6%; margin-left:74.1%"></i></div><b>−€10</b></div>
+        <div class="wf-row rev"><span>Our revenue</span><div class="bar"><i style="width:74.1%"></i></div><b>€133</b></div>
+        <div class="wf-row neg"><span>COGS</span><div class="bar"><i style="width:45.8%; margin-left:28.3%"></i></div><b>−€82</b></div>
+        <div class="wf-row gp"><span>Gross profit</span><div class="bar"><i style="width:28.3%"></i></div><b>€51</b></div>
       </div>
       <div class="duo">
-        <div>Partner sale<b>€57 · 41 %</b></div>
-        <div>Direct sale<b>€106 · 56 %</b></div>
+        <div>Pro user, direct €179<b>€51 · 38 %</b></div>
+        <div>Via partner €249<b>€57 · 41 %</b></div>
       </div>
     </div>
   </div>
-  <div class="foot">Our estimates at 1 000 units. Owner payback ≈ 1 year.</div>
+  <div class="value">
+    <div><span>Service visit</span><b>€150–300</b><span>looks once a year</span></div>
+    <div><span>Cloud AI</span><b>≈ €300 / 5 yr</b><span>streams 83 GB of your sound a month</span></div>
+    <div class="us"><span>Heat Pump Doctor, direct</span><b>€179 once</b><span>AI on the UNO Q: 86 400 checks a day, offline, ≈ €4 / yr power</span></div>
+  </div>
+  <div class="foot">Direct: no channel margin, Pro users get €70 off (partners €249, keep 30 %). Payback &lt; 1 yr at 15 % loss. Our estimates: cloud ≈ €5 / month per 16 kHz stream, board ≈ 3 W. Deep clean €150–300 (Prisma).</div>
   <div class="num">7</div>
 </section>
 
@@ -524,26 +567,40 @@
       <table class="plan">
         <tr class="head"><td></td><td>Year 1<small>Finland</small></td><td>Year 2<small>Nordics</small></td><td>Year 3<small>EU</small></td></tr>
         <tr><td>Units</td><td>3 000</td><td>20 000</td><td>100 000</td></tr>
-        <tr><td>Revenue</td><td>€0.5 M</td><td>€3.3 M</td><td>€15.4 M</td></tr>
-        <tr><td>Gross profit</td><td>€0.3 M<small class="pct">53 %</small></td><td>€1.8 M<small class="pct">54 %</small></td><td>€8.9 M<small class="pct">58 %</small></td></tr>
-        <tr class="profit"><td>Operating profit</td><td class="neg">−€0.1 M</td><td>€0.6 M</td><td>€4.4 M</td></tr>
+        <tr><td>Revenue</td><td>€0.4 M</td><td>€2.7 M</td><td>€13.7 M</td></tr>
+        <tr><td>Gross profit</td><td>€0.16 M<small class="pct">39 %</small></td><td>€1.2 M<small class="pct">45 %</small></td><td>€7.2 M<small class="pct">53 %</small></td></tr>
+        <tr class="profit"><td>Operating profit</td><td class="neg">−€0.24 M</td><td>€0.02 M</td><td>€2.7 M</td></tr>
       </table>
     </div>
     <div style="display:flex; flex-direction:column; gap:20px">
       <div class="card steps">
-        <div><b>Y1 · Finland</b>Pro users, sold direct</div>
-        <div><b>Y2 · Nordics</b>+ energy companies, installers</div>
-        <div><b>Y3 · EU</b>Partners carry volume</div>
+        <div><b>Y1 · Finland</b>Pro users, €179 direct</div>
+        <div><b>Y2 · Nordics</b>+ energy companies: fleet view on Aiven</div>
+        <div><b>Y3 · EU</b>Partners carry volume, CRA + GDPR ready</div>
       </div>
       <div class="card pro">
-        <span class="badge b-ice">Entry: Pro users</span>
+        <span class="badge b-ice">Entry: Pro users · €179</span>
         <h3>Energy-aware homeowners</h3>
-        <p style="font-size:17px">Watch spot prices, run Home Assistant. Self-install, buy direct.</p>
+        <p style="font-size:17px">Watch spot prices, run Home Assistant. Self-install, buy direct: no channel margin.</p>
       </div>
     </div>
   </div>
-  <div class="foot">Our estimates. Direct share 70 → 50 → 30 %. COGS €82 → €75 → €65. Operating costs €0.4 M → €1.2 M → €4.5 M.</div>
+  <div class="foot">Our estimates. Direct €179 / partner €249, direct share 70 → 50 → 30 %. COGS €82 → €75 → €65. Operating costs €0.4 M → €1.2 M → €4.5 M.</div>
   <div class="num">8</div>
+</section>
+
+<!-- Team -->
+<section class="slide team">
+  <div class="kicker">The team</div>
+  <h2>The Meat Proxies</h2>
+  <div class="grid g3 crew">
+    <div class="card"><img src="img/ari.jpg" alt="Ari"><b>Ari</b><span>Founder</span></div>
+    <div class="card"><img src="img/otso.jpg" alt="Otso"><b>Otso</b><span>Founder</span></div>
+    <div class="card"><img src="img/svante.jpg" alt="Svante"><b>Svante</b><span>Founder</span></div>
+  </div>
+  <div class="banner">Three founders spent a sleepless weekend <b>so that you do not have to.</b></div>
+  <div class="foot">Built in 48 h at Junction 2026 · Arduino UNO Q, Edge Impulse, Aiven · Arduino Project Hub: Junction Finland 2026</div>
+  <div class="num"></div>
 </section>
 
 </div>

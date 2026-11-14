@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heat Pump Doctor · Nordic paper</title>
+<style>
+  /* Style: Nordic paper. Generated from ../index.html. */
+  :root {
+    --bg: #f6f3ec;
+    --outer: #e8e3d7;
+    --panel: #ffffff;
+    --line: #e1dbcd;
+    --text: #1c2420;
+    --muted: #58635c;
+    --dim: #8b938c;
+    --green: #2e7d50;
+    --ice: #2a6f9e;
+    --warn: #bf6a10;
+    --bad: #c0392b;
+    --inset: #f6f3ec;
+    --inset-line: #e4dfd2;
+    --track: #f1ede4;
+    --neutral-bar: #b9b4a6;
+    --strong-line: #c9c2b2;
+    --font-head: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    --font-stat: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --radius: 6px; --radius-sm: 6px; --bullet-radius: 50%;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--outer); color: var(--text); font-family: var(--font-body); }
+  body { overflow: hidden; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center center; }
+  .slide { position: absolute; inset: 0; background: var(--bg); padding: 64px 80px 52px;
+    display: none; flex-direction: column; overflow: hidden; }
+  .slide.active { display: flex; }
+  .kicker { font-size: 15px; letter-spacing: .18em; text-transform: uppercase; color: var(--green); font-weight: 600; margin-bottom: 14px; }
+  h1 { font-family: var(--font-head); font-size: 88px; line-height: 1.05; font-weight: 750; letter-spacing: -.02em; }
+  h2 { font-family: var(--font-head); font-size: 46px; line-height: 1.1; font-weight: 720; letter-spacing: -.015em; margin-bottom: 36px; }
+  h3 { font-size: 22px; font-weight: 650; margin-bottom: 14px; }
+  p { font-size: 20px; line-height: 1.4; color: var(--muted); }
+  strong { color: var(--text); font-weight: 650; }
+  .foot { margin-top: auto; padding-top: 14px; font-size: 12.5px; color: var(--dim); line-height: 1.45; }
+  .num { position: absolute; right: 36px; bottom: 22px; font-size: 13px; color: var(--dim); }
+  .grid { display: grid; gap: 24px; }
+  .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 28px; }
+  .stat { font-family: var(--font-stat); font-size: 54px; font-weight: 750; letter-spacing: -.02em; line-height: 1; }
+  .stat small { font-size: 24px; font-weight: 600; color: var(--muted); }
+  .label { margin-top: 12px; font-size: 17px; line-height: 1.35; color: var(--muted); }
+  .list { display: flex; flex-direction: column; gap: 14px; }
+  .list div { font-size: 21px; color: var(--text); display: flex; gap: 14px; align-items: baseline; }
+  .list div::before { content: ""; flex: none; width: 9px; height: 9px; border-radius: var(--bullet-radius); background: var(--green); transform: translateY(-3px); }
+  .list span { color: var(--muted); }
+  .list div.sub-note { font-size: 16px; color: var(--muted); margin-top: 8px; }
+  .list div.sub-note::before { display: none; }
+  .title-slide { justify-content: center; }
+  .title-slide .tag { font-size: 32px; color: var(--text); margin-top: 28px; max-width: 900px; line-height: 1.3; }
+  .pills { margin-top: 48px; }
+  .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 7px 15px;
+    margin-right: 8px; font-size: 15px; color: var(--muted); background: var(--panel); }
+  .faults { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 30px; }
+  .fault { border-top: 3px solid var(--warn); padding-top: 14px; font-size: 20px; font-weight: 650; }
+  .fault span { display: block; font-size: 16px; font-weight: 400; color: var(--muted); margin-top: 4px; }
+  .impact { display: grid; grid-template-columns: 1fr 1.4fr; gap: 26px; flex: 1; min-height: 0; }
+  .money h3, .money .stat { color: var(--warn); }
+  .money .row + .row { margin-top: 26px; }
+  .env { border-color: color-mix(in srgb, var(--green) 45%, transparent);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--green) 10%, transparent), var(--panel) 55%); }
+  .env h3 { color: var(--green); }
+  .env-row { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+  .env-row:first-of-type { border-top: 0; padding-top: 2px; }
+  .env-row .big { font-family: var(--font-stat); font-size: 32px; font-weight: 750; line-height: 1; }
+  .env-row p { font-size: 19px; color: var(--text); }
+  .sol { display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; flex: 1; align-items: center; }
+  .sol svg { width: 100%; height: auto; }
+  .diag .card { display: flex; flex-direction: column; gap: 6px; }
+  .diag .icon { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 12px; }
+  .diag .sensor { font-size: 14px; letter-spacing: .1em; text-transform: uppercase; font-weight: 650; }
+  .diag h3 { font-size: 26px; margin-bottom: 18px; }
+  .diag .list div { font-size: 20px; }
+  .t .sensor, .t .icon svg { color: var(--warn); } .t .icon { background: color-mix(in srgb, var(--warn) 12%, transparent); } .t .list div::before { background: var(--warn); }
+  .a .sensor, .a .icon svg { color: var(--green); } .a .icon { background: color-mix(in srgb, var(--green) 12%, transparent); }
+  .ui .card { display: flex; flex-direction: column; gap: 18px; }
+  .ui-head { display: flex; align-items: center; gap: 12px; }
+  .ui-head h3 { margin: 0; }
+  .badge { font-size: 13px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+  .b-green { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+  .b-ice { background: color-mix(in srgb, var(--ice) 14%, transparent); color: var(--ice); }
+  .notif { background: var(--inset); border: 1px solid var(--inset-line); border-radius: 12px; padding: 12px 16px; }
+  .notif-top { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+  .notif-title { font-size: 17px; font-weight: 650; margin-top: 4px; }
+  .notif-body { font-size: 15px; color: var(--muted); }
+  .rows { background: var(--inset); border: 1px solid var(--inset-line); border-radius: 12px; padding: 8px 16px; }
+  .rows div { display: flex; justify-content: space-between; font-size: 16px; padding: 7px 0; color: var(--muted); }
+  .rows div + div { border-top: 1px solid var(--inset-line); }
+  .rows b { font-weight: 650; } .ok { color: var(--green); } .watch { color: var(--warn); }
+  .one { font-size: 18px; color: var(--muted); }
+  .ui h2 { margin-bottom: 22px; }
+  .ui .card { gap: 12px; padding: 20px 24px; }
+  .pair { display: flex; gap: 14px; align-items: center; font-size: 15.5px; line-height: 1.35; color: var(--muted); }
+  .pair svg { width: 40px; height: 40px; flex: none; color: var(--text); }
+  .pair b { color: var(--text); }
+  .ui .rows div { padding: 5px 0; }
+  .trust { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+  .trust div { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px; }
+  .trust div.aiven { flex: 1.7; border-color: color-mix(in srgb, var(--ice) 50%, transparent); }
+  .trust b { display: block; font-size: 16px; }
+  .trust span { display: block; font-size: 13.5px; line-height: 1.3; color: var(--muted); margin-top: 2px; }
+  .trust i { width: 18px; height: 2px; background: var(--neutral-bar); position: relative; flex: none; }
+  .trust i::after { content: ""; position: absolute; right: -2px; top: -4px; border: 5px solid transparent; border-left-color: var(--neutral-bar); }
+  .cra { margin-top: 12px; font-size: 14.5px; color: var(--muted); }
+  .cra b { color: var(--green); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; margin-right: 8px; }
+  .biz h2 { margin-bottom: 28px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 18px; color: var(--muted); }
+  .tbl td { padding: 9px 0; border-top: 1px solid var(--line); }
+  .tbl tr:first-child td { border-top: 0; }
+  .tbl td:last-child { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .tbl tr.total td { color: var(--text); font-weight: 700; border-top: 1px solid var(--strong-line); }
+  .tbl tr.total td:last-child { color: var(--warn); }
+  .wf { display: flex; flex-direction: column; gap: 12px; }
+  .wf-row { display: grid; grid-template-columns: 170px 1fr 64px; gap: 12px; align-items: center; font-size: 17px; color: var(--muted); }
+  .wf-row b { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .bar { height: 18px; background: var(--track); border-radius: 4px; overflow: hidden; display: flex; }
+  .bar i { display: block; height: 100%; background: var(--neutral-bar); border-radius: 4px; }
+  .wf-row.neg .bar i { background: color-mix(in srgb, var(--bad) 70%, transparent); } .wf-row.neg b { color: var(--bad); }
+  .wf-row.rev .bar i { background: var(--ice); }
+  .wf-row.gp .bar i { background: var(--green); } .wf-row.gp, .wf-row.gp b { color: var(--green); font-weight: 700; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+  .duo div { background: var(--track); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 15px; color: var(--muted); }
+  .duo b { display: block; font-family: var(--font-stat); font-size: 30px; color: var(--green); margin-top: 2px; }
+  .value { display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 14px; margin-top: 16px; }
+  .value div { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 16px; }
+  .value span { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.3; }
+  .value b { display: block; font-family: var(--font-stat); font-size: 24px; letter-spacing: -.01em; margin: 1px 0 2px; }
+  .value .us { border-color: color-mix(in srgb, var(--green) 55%, transparent);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--green) 12%, transparent), var(--panel) 60%); }
+  .value .us b { color: var(--green); }
+  .biz h2 { margin-bottom: 20px; }
+  .biz .card { padding: 18px 24px; }
+  .biz h3 { margin-bottom: 8px; }
+  .biz .tbl { font-size: 17px; } .biz .tbl td { padding: 5px 0; }
+  .biz .wf { gap: 8px; }
+  .biz .duo { margin-top: 14px; } .biz .duo div { padding: 9px 14px; } .biz .duo b { font-size: 26px; }
+  .plan { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .plan td { padding: 13px 0 13px 12px; text-align: right; font-size: 21px; border-top: 1px solid var(--line); }
+  .plan td:first-child { text-align: left; padding-left: 0; color: var(--muted); font-size: 18px; }
+  .plan tr.head td { border-top: 0; color: var(--green); font-weight: 700; font-size: 19px; }
+  .plan tr.head small { display: block; font-size: 13px; color: var(--dim); font-weight: 500; }
+  .plan small.pct { display: block; font-size: 13px; color: var(--dim); }
+  .plan tr.profit td { font-weight: 750; color: var(--green); border-top: 1px solid var(--strong-line); }
+  .plan tr.profit td:first-child { color: var(--text); }
+  .plan td.neg { color: var(--bad) !important; }
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+  .steps div { font-size: 17px; color: var(--muted); }
+  .steps b { display: block; color: var(--text); font-size: 19px; }
+  .pro { border-color: color-mix(in srgb, var(--ice) 40%, transparent); }
+  .pro h3 { font-size: 19px; margin: 12px 0 8px; }
+  .wave { width: 100%; height: 56px; display: block; }
+  .wave-labels { display: flex; justify-content: space-between; font-size: 14px; color: var(--dim); margin: 4px 0 26px; }
+  .wave-labels span:last-child { color: var(--warn); }
+  .pillars .card { padding: 22px 26px; }
+  .pk { font-size: 14px; letter-spacing: .1em; text-transform: uppercase; font-weight: 650; margin-bottom: 10px; }
+  .p-money .pk, .p-money .stat { color: var(--warn); }
+  .p-env { border-color: color-mix(in srgb, var(--green) 45%, transparent); } .p-env .pk, .p-env .stat { color: var(--green); }
+  .p-people .pk, .p-people .stat { color: var(--ice); }
+  .banner { margin-top: 22px; font-size: 24px; color: var(--muted); }
+  .banner b { color: var(--text); }
+  .sense h2 { margin-bottom: 30px; }
+  .sense-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 40px; flex: 1; min-height: 0; align-items: center; }
+  .sense-grid svg { width: 100%; height: auto; display: block; }
+  .steps3 { display: flex; flex-direction: column; gap: 22px; }
+  .steps3 div { font-size: 18px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 16px; }
+  .steps3 b { display: block; font-size: 22px; color: var(--text); margin-bottom: 2px; }
+  .steps3 div:last-child { border-left-color: var(--green); }
+  .pipe { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .pipe div { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 19px; font-weight: 650; }
+  .pipe div:last-child { border-color: color-mix(in srgb, var(--green) 50%, transparent); }
+  .pipe span { display: block; font-size: 14px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .pipe i { width: 18px; height: 2px; background: var(--neutral-bar); position: relative; flex: none; }
+  .pipe i::after { content: ""; position: absolute; right: -2px; top: -4px; border: 5px solid transparent; border-left-color: var(--neutral-bar); }
+  .sigs .card { display: flex; flex-direction: column; gap: 4px; padding: 20px 22px; }
+  .sigs svg { width: 100%; height: 64px; margin-bottom: 10px; }
+  .sigs b { font-size: 20px; } .sigs span { font-size: 16px; color: var(--muted); }
+  .note { margin-top: 22px; font-size: 17px; color: var(--muted); }
+  .crew .card { padding: 16px 16px 20px; display: flex; flex-direction: column; }
+  .crew img { display: block; width: 100%; height: 270px; object-fit: cover; object-position: center 25%; border-radius: var(--radius-sm); }
+  .crew b { font-size: 26px; margin: 14px 4px 0; }
+  .crew span { font-size: 14px; letter-spacing: .1em; text-transform: uppercase; font-weight: 650; color: var(--green); margin: 4px 4px 0; }
+  #hint { position: fixed; left: 16px; bottom: 12px; font-size: 12px; color: var(--dim); }
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { background: var(--bg); overflow: visible; }
+    #stage { position: static; transform: none !important; }
+    .slide { position: relative; display: flex !important; width: 1280px; height: 720px; page-break-after: always; break-after: page; }
+    #hint { display: none; }
+  }
+
+  h1 { font-weight: 600; letter-spacing: -.01em; font-size: 96px; }
+  h2 { font-weight: 600; letter-spacing: -.005em; }
+  .stat, .env-row .big, .duo b { font-weight: 600; letter-spacing: -.01em; }
+  .card { box-shadow: 0 1px 2px rgba(60,50,30,.06), 0 8px 24px rgba(60,50,30,.05); }
+  .kicker { display: flex; align-items: center; gap: 12px; letter-spacing: .14em; font-size: 13px; }
+  .kicker::before { content: ""; width: 28px; height: 1px; background: currentColor; }
+  .title-slide { background: var(--bg); }
+  .title-slide::after { content: ""; position: absolute; right: 80px; top: 64px; bottom: 52px; width: 1px; background: var(--line); }
+  .title-slide .tag { font-family: var(--font-head); font-style: italic; font-size: 34px; max-width: 860px; color: var(--muted); }
+  .pill { background: transparent; }
+  .foot { border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1. Title -->
+<section class="slide title-slide">
+  <div class="kicker">Junction 2026 · Arduino challenge</div>
+  <h1>Heat Pump Doctor</h1>
+  <p class="tag">Your heat pump loses efficiency silently. We hear it before your electricity bill does.</p>
+  <div class="pills"><span class="pill">Arduino UNO Q</span><span class="pill">Edge AI</span><span class="pill">Plug-and-play retrofit</span><span class="pill">Secure EU cloud on Aiven</span></div>
+  <div class="num">1</div>
+</section>
+
+<!-- 2. Why it matters -->
+<section class="slide why">
+  <div class="kicker">Why it matters</div>
+  <h2 style="margin-bottom:14px">Your heat pump is talking.<br>Nobody listens.</h2>
+  <svg class="wave" viewBox="0 0 1120 70" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 35 C 40 15, 80 15, 120 35 S 200 55, 240 35 S 320 15, 360 35 S 440 55, 480 35 S 540 18, 570 35 L 590 8 L 605 62 L 620 14 L 635 58 L 650 24 L 668 50 C 700 30, 720 40, 740 35 L 760 5 L 772 66 L 786 10 L 800 60 L 815 2 L 830 68 L 846 16 L 860 56 L 880 28 L 900 46 L 920 4 L 934 66 L 950 12 L 966 60 L 985 20 L 1000 52 L 1020 6 L 1036 64 L 1052 18 L 1070 54 L 1090 30 L 1120 35"
+      fill="none" stroke="url(#wg)" stroke-width="3" stroke-linejoin="round"/>
+    <defs><linearGradient id="wg" x1="0" x2="1"><stop offset="0" stop-color="#2e7d50"/><stop offset=".5" stop-color="#2e7d50"/><stop offset=".56" stop-color="#bf6a10"/><stop offset="1" stop-color="#c0392b"/></linearGradient></defs>
+  </svg>
+  <div class="wave-labels"><span>healthy purr</span><span>rattle, groan, ice: weeks before it breaks</span></div>
+  <div class="grid g3 pillars">
+    <div class="card p-money"><div class="pk">Your wallet</div><div class="stat">+30 %</div><div class="label">energy use from common faults, unnoticed</div></div>
+    <div class="card p-env"><div class="pk">The climate</div><div class="stat">3×</div><div class="label">electricity when a failed unit falls back to resistive heat, at peak hours</div></div>
+    <div class="card p-people"><div class="pk">People</div><div class="stat">−25 °C</div><div class="label">elderly and rural homes lose heat on the coldest night</div></div>
+  </div>
+  <div class="banner">Finland alone: <b>≈ 180 GWh</b> and <b>≈ €27 M</b> wasted every year</div>
+  <div class="foot">Our estimate: 1 in 5 of 1.2 M+ Finnish heat pumps running 15 % worse, 5 000 kWh/yr each, 0.15 €/kWh. +30 %: NIST TN 1848 (2014).</div>
+  <div class="num"></div>
+</section>
+
+<!-- 3. Problem -->
+<section class="slide">
+  <div class="kicker">The problem</div>
+  <h2>Millions of outdoor units, nobody watching</h2>
+  <div class="grid g4">
+    <div class="card"><div class="stat">1.2 M<small>+</small></div><div class="label">heat pumps in Finland</div></div>
+    <div class="card"><div class="stat">200 M</div><div class="label">ACs sold worldwide in 2024</div></div>
+    <div class="card"><div class="stat">€140 B</div><div class="label">equipment market per year</div></div>
+    <div class="card"><div class="stat">30 %</div><div class="label">of peak electricity goes to cooling</div></div>
+  </div>
+  <div class="faults">
+    <div class="fault">Dirty coil<span>efficiency drops every month</span></div>
+    <div class="fault">Failed defrost<span>falls back to electric heating</span></div>
+    <div class="fault">Fan faults<span>heard only when loud</span></div>
+    <div class="fault">No feedback<span>until the bill, or a cold night</span></div>
+  </div>
+  <div class="foot">SULPU (2022); IEA Space Cooling; IEA heat pump market ≈ USD 50 B + AC market ≈ USD 99 B (Grand View Research, low end), 2024, at ≈ 0.9 €/USD.</div>
+  <div class="num">2</div>
+</section>
+
+<!-- 3. Impact -->
+<section class="slide">
+  <div class="kicker">The impact</div>
+  <h2>It costs money, and the climate more</h2>
+  <div class="impact">
+    <div class="card money">
+      <h3>Financial</h3>
+      <div class="row"><div class="stat">+30 %</div><div class="label">energy use from common faults</div></div>
+      <div class="row"><div class="stat">225 €<small>/yr</small></div><div class="label">lost per house at 15 % efficiency loss</div></div>
+      <div class="row"><div class="stat">€€€</div><div class="label">compressor repair instead of a coil rinse</div></div>
+    </div>
+    <div class="card env">
+      <h3>Environmental</h3>
+      <div class="env-row"><div class="big">Peak kWh</div><p>Wasted at cold, high-carbon peak hours</p></div>
+      <div class="env-row"><div class="big">3×</div><p>More electricity on resistive backup heat</p></div>
+      <div class="env-row"><div class="big">2 t CO₂e</div><p>Per kg of leaked R410A refrigerant</p></div>
+      <div class="env-row"><div class="big">+ years</div><p>Longer equipment life, less e-waste</p></div>
+    </div>
+  </div>
+  <div class="foot">NIST TN 1848 (2014); IPCC AR4 GWP 2088 for R410A. 225 € = 10 000 kWh × 15 % × 0.15 €/kWh, our estimate.</div>
+  <div class="num">3</div>
+</section>
+
+<!-- 4. Solution -->
+<section class="slide">
+  <div class="kicker">The solution</div>
+  <h2>Small box, tiny mic, installed in 5 minutes</h2>
+  <div class="sol">
+    <svg viewBox="0 0 560 420" role="img" aria-label="Outdoor unit with the sensor box underneath, a tiny microphone inside the housing base, wired to a small UNO Q box, one probe in the incoming air and one clipped to the coil fins">
+      <defs>
+        <pattern id="fins" width="7" height="10" patternUnits="userSpaceOnUse">
+          <rect width="7" height="10" fill="#efeadf"/>
+          <line x1="3.5" y1="0" x2="3.5" y2="10" stroke="#a7a99c" stroke-width="1.4"/>
+        </pattern>
+      </defs>
+      <line x1="40" y1="368" x2="520" y2="368" stroke="#cfc8b8" stroke-width="3"/>
+      <rect x="110" y="300" width="14" height="68" fill="#cfc8b8"/>
+      <rect x="400" y="300" width="14" height="68" fill="#cfc8b8"/>
+      <rect x="80" y="70" width="380" height="230" rx="10" fill="#ece7dc" stroke="#8f978d" stroke-width="2"/>
+      <rect x="92" y="82" width="56" height="206" rx="4" fill="url(#fins)" stroke="#8f978d"/>
+      <text x="120" y="60" fill="#58635c" font-size="14" text-anchor="middle">coil</text>
+      <circle cx="290" cy="185" r="92" fill="#f9f7f2" stroke="#8f978d" stroke-width="2"/>
+      <circle cx="290" cy="185" r="70" fill="none" stroke="#d7d1c3"/>
+      <circle cx="290" cy="185" r="48" fill="none" stroke="#d7d1c3"/>
+      <g fill="#bdb8aa">
+        <path d="M290 185 C 300 140, 330 130, 340 150 C 330 165, 310 175, 290 185Z"/>
+        <path d="M290 185 C 330 200, 335 232, 315 240 C 300 228, 292 208, 290 185Z"/>
+        <path d="M290 185 C 255 210, 225 205, 225 183 C 245 175, 268 178, 290 185Z"/>
+      </g>
+      <circle cx="290" cy="185" r="9" fill="#8f978d"/>
+      <g stroke="#2a6f9e" stroke-width="2.4" fill="none" opacity=".75">
+        <path d="M30 140 h44"/><path d="M64 133 l10 7 -10 7"/>
+        <path d="M30 230 h44"/><path d="M64 223 l10 7 -10 7"/>
+      </g>
+      <text x="22" y="118" fill="#2a6f9e" font-size="13">air in</text>
+      <g stroke="#bf6a10" stroke-width="2.4" fill="none" opacity=".8">
+        <path d="M470 150 h50"/><path d="M510 143 l10 7 -10 7"/>
+        <path d="M470 220 h50"/><path d="M510 213 l10 7 -10 7"/>
+      </g>
+      <text x="474" y="128" fill="#bf6a10" font-size="13">air out</text>
+      <!-- tiny mic inside the housing, on the base pan -->
+      <rect x="163" y="276" width="7" height="14" rx="3.5" fill="#2e7d50"/>
+      <path d="M176 278 q5 5 0 10 M181 274 q8 9 0 18" fill="none" stroke="#2e7d50" stroke-width="1.6"/>
+      <text x="192" y="290" fill="#2e7d50" font-size="12">tiny mic, inside</text>
+      <!-- small UNO Q box under the unit -->
+      <rect x="236" y="320" width="84" height="38" rx="7" fill="#e3f1e8" stroke="#2e7d50" stroke-width="2"/>
+      <rect x="244" y="313" width="16" height="7" rx="2" fill="#c0392b"/>
+      <rect x="296" y="313" width="16" height="7" rx="2" fill="#c0392b"/>
+      <text x="278" y="344" fill="#1c2420" font-size="14" font-weight="600" text-anchor="middle">UNO Q</text>
+      <!-- thin cables from the box -->
+      <path d="M236 330 C 200 330, 168 318, 166 290" fill="none" stroke="#2e7d50" stroke-width="2"/>
+      <path d="M240 352 C 150 360, 70 330, 70 250 L 70 186" fill="none" stroke="#2a6f9e" stroke-width="2.5"/>
+      <circle cx="70" cy="180" r="8" fill="#2a6f9e"/>
+      <rect x="63" y="190" width="14" height="6" rx="1.5" fill="#c0392b"/>
+      <path d="M248 320 C 240 300, 150 290, 128 252" fill="none" stroke="#bf6a10" stroke-width="2.5"/>
+      <circle cx="122" cy="244" r="8" fill="#bf6a10" stroke="#f6f3ec" stroke-width="2"/>
+      <text x="160" y="248" fill="#bf6a10" font-size="13">clip on coil fin</text>
+      <!-- single power cable -->
+      <path d="M320 344 L 520 344" stroke="#8b938c" stroke-width="2"/>
+      <text x="520" y="338" fill="#58635c" font-size="13" text-anchor="end">5 V power</text>
+      <rect x="40" y="392" width="14" height="6" rx="1.5" fill="#c0392b"/>
+      <text x="62" y="399" fill="#58635c" font-size="13">magnet mount</text>
+      <circle cx="190" cy="395" r="6" fill="#2a6f9e"/><text x="202" y="399" fill="#58635c" font-size="13">air in probe</text>
+      <circle cx="306" cy="395" r="6" fill="#bf6a10"/><text x="318" y="399" fill="#58635c" font-size="13">coil surface probe</text>
+    </svg>
+    <div class="list">
+      <div>1 · Stick UNO Q under the unit<span>· magnets</span></div>
+      <div>2 · Slip tiny mic in at the base<span>· hears fan, compressor</span></div>
+      <div>3 · Clip probe on a fin<span>· stick air probe on</span></div>
+      <div>4 · Plug in<span>· learns your unit in 2 min</span></div>
+      <div class="sub-note">No tools, no refrigerant work. Any brand. Raw sound never leaves home.</div>
+    </div>
+  </div>
+  <div class="num">4</div>
+</section>
+
+<!-- 5. Diagnostics -->
+<section class="slide diag">
+  <div class="kicker">The diagnostics</div>
+  <h2>Two senses, one health score</h2>
+  <div class="grid g2" style="flex:1; min-height:0; gap:28px">
+    <div class="card t">
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0Z"/></svg></div>
+      <div class="sensor">Thermal</div>
+      <h3>Air vs coil</h3>
+      <div class="list">
+        <div>Dirty coil</div>
+        <div>Ice on coil, weak defrost</div>
+        <div>Slow trend, weeks</div>
+      </div>
+    </div>
+    <div class="card a">
+      <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10"/></svg></div>
+      <div class="sensor">Audio</div>
+      <h3>Fan and compressor sound</h3>
+      <div class="list">
+        <div>Object or ice touching fan</div>
+        <div>Bearing wear</div>
+        <div>Imbalance</div>
+      </div>
+    </div>
+  </div>
+  <div class="num">5</div>
+</section>
+
+<!-- Sense 1: thermal -->
+<section class="slide sense">
+  <div class="kicker" style="color:var(--warn)">Sense 1 · Thermal</div>
+  <h2>A dirty coil runs colder than the air</h2>
+  <div class="sense-grid">
+    <div class="card">
+      <svg viewBox="0 0 520 330" role="img" aria-label="Gap between incoming air and coil surface temperature drifting above the healthy band over weeks until it crosses the clean-it line">
+        <!-- probe diagram -->
+        <circle cx="8" cy="17" r="6" fill="#2a6f9e"/>
+        <text x="20" y="22" fill="#2a6f9e" font-size="15">air in −2 °C</text>
+        <path d="M118 18 h28" stroke="#58635c" stroke-width="2"/>
+        <rect x="152" y="4" width="70" height="28" rx="4" fill="url(#fins2)" stroke="#8f978d"/>
+        <circle cx="187" cy="18" r="6" fill="#bf6a10" stroke="#f6f3ec" stroke-width="2"/>
+        <text x="187" y="50" fill="#58635c" font-size="12" text-anchor="middle">coil fin</text>
+        <text x="236" y="22" fill="#bf6a10" font-size="15">coil −9 °C</text>
+        <text x="400" y="22" fill="#1c2420" font-size="15" font-weight="700">gap = 7 °C</text>
+        <defs><pattern id="fins2" width="6" height="10" patternUnits="userSpaceOnUse"><rect width="6" height="10" fill="#efeadf"/><line x1="3" y1="0" x2="3" y2="10" stroke="#a7a99c" stroke-width="1.3"/></pattern></defs>
+        <!-- chart -->
+        <line x1="40" y1="290" x2="510" y2="290" stroke="#d7d1c3"/>
+        <line x1="40" y1="80" x2="40" y2="290" stroke="#d7d1c3"/>
+        <text x="34" y="88" fill="#8b938c" font-size="12" text-anchor="end">gap</text>
+        <text x="510" y="310" fill="#8b938c" font-size="12" text-anchor="end">weeks →</text>
+        <rect x="40" y="215" width="470" height="40" fill="rgba(46,125,80,.12)"/>
+        <text x="48" y="249" fill="#2e7d50" font-size="12">healthy, same weather</text>
+        <line x1="40" y1="120" x2="510" y2="120" stroke="#c0392b" stroke-dasharray="5 5"/>
+        <text x="505" y="112" fill="#c0392b" font-size="12" text-anchor="end">clean it</text>
+        <path d="M40 236 L80 233 L120 238 L160 231 L200 226 L240 219 L280 208 L320 196 L360 182 L400 166 L440 150 L480 132 L505 120" fill="none" stroke="#bf6a10" stroke-width="3"/>
+        <path d="M200 226 L240 212 L280 198 L320 184 L360 168 L400 150 L440 134 L480 114 L505 104 L505 136 L480 150 L440 166 L400 182 L360 196 L320 208 L280 218 L240 226 L200 232Z" fill="rgba(191,106,16,.14)"/>
+        <circle cx="505" cy="120" r="6" fill="#c0392b"/>
+      </svg>
+    </div>
+    <div class="steps3">
+      <div><b>1 · Two probes</b>incoming air, and a clip on a coil fin</div>
+      <div><b>2 · Learn the clean gap</b>per outdoor temperature and load</div>
+      <div><b>3 · Track drift</b>dirt or frost: the gap grows</div>
+      <div><b>Defrost check</b>the gap must drop back after each defrost</div>
+    </div>
+  </div>
+  <div class="num"></div>
+</section>
+
+<!-- Sense 2: audio -->
+<section class="slide sense">
+  <div class="kicker">Sense 2 · Audio</div>
+  <h2>It learns the healthy sound of its own unit</h2>
+  <div class="pipe">
+    <div>Mic<span>16 kHz</span></div><i></i>
+    <div>22 physics features<span>every second</span></div><i></i>
+    <div>Healthy model<span>learned in 2 min</span></div><i></i>
+    <div>Score + reason<span>in plain words</span></div>
+  </div>
+  <div class="grid g3 sigs">
+    <div class="card">
+      <svg viewBox="0 0 300 70" aria-hidden="true"><path d="M0 35 Q 12 10 25 35 T 50 35 T 75 35 T 100 35 T 125 35 T 150 35 T 175 35 T 200 35 T 225 35 T 250 35 T 275 35 T 300 35" fill="none" stroke="#2e7d50" stroke-width="2" opacity=".35"/><path d="M0 35 C 20 0, 55 0, 75 35 S 130 70, 150 35 S 205 0, 225 35 S 280 70, 300 35" fill="none" stroke="#2e7d50" stroke-width="3"/></svg>
+      <b>Imbalance</b><span>airflow pulses once per turn</span>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 300 70" aria-hidden="true"><path d="M0 35 H40 L44 4 L48 66 L52 35 H115 L119 4 L123 66 L127 35 H190 L194 4 L198 66 L202 35 H265 L269 4 L273 66 L277 35 H300" fill="none" stroke="#bf6a10" stroke-width="3"/></svg>
+      <b>Something touching the fan</b><span>a click every revolution</span>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 300 70" aria-hidden="true"><path d="M0 35 l5 -14 l5 26 l5 -20 l5 18 l5 -24 l5 22 l5 -16 l5 20 l5 -26 l5 24 l5 -18 l5 14 l5 -22 l5 26 l5 -20 l5 16 l5 -24 l5 22 l5 -14 l5 20 l5 -26 l5 24 l5 -18 l5 16 l5 -22 l5 26 l5 -20 l5 18 l5 -24 l5 22 l5 -16 l5 20 l5 -26 l5 24 l5 -18 l5 14 l5 -22 l5 26 l5 -20 l5 16 l5 -24 l5 22 l5 -14 l5 20 l5 -26 l5 24 l5 -18 l5 16 l5 -22 l5 26 l5 -20 l5 18 l5 -24 l5 22 l5 -16 l5 20 l5 -26 l5 24 l5 -18 l5 14 l5 -22" fill="none" stroke="#c0392b" stroke-width="2"/></svg>
+      <b>Bearing wear</b><span>high-pitched whine and impulses</span>
+    </div>
+  </div>
+  <div class="note">Ignores cars and voices: 5 s median. Edge Impulse model as a second opinion.</div>
+  <div class="num"></div>
+</section>
+
+<!-- 6. User interface -->
+<section class="slide ui">
+  <div class="kicker">The user interface</div>
+  <h2>Alerts where you are. Data where it's safe.</h2>
+  <div class="grid g2" style="gap:28px">
+    <div class="card">
+      <div class="ui-head"><span class="badge b-green">Web push</span><h3>Any phone browser</h3></div>
+      <div class="notif">
+        <div class="notif-top"><span class="dot"></span>Heat Pump Doctor · now</div>
+        <div class="notif-title">Coil needs cleaning</div>
+        <div class="notif-body">Rinse the outdoor coil. Costing ~15 € / month.</div>
+      </div>
+      <div class="rows">
+        <div><span>Coil cleanliness</span><b class="watch">Action</b></div>
+        <div><span>Fan</span><b class="ok">OK</b></div>
+        <div><span>Compressor</span><b class="ok">OK</b></div>
+        <div><span>Defrost</span><b class="ok">OK</b></div>
+      </div>
+      <div class="pair"><svg viewBox="0 0 21 21" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2z M14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3z M0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2z M9 0h2v2H9z M9 3h1v3H9z M12 9h3v1h-3z M8 8h2v2H8z M16 9h2v2h-2z M19 8h2v1h-2z M9 12h1v3H9z M11 14h2v2h-2z M14 12h2v2h-2z M17 14h4v1h-4z M15 17h2v4h-2z M19 17h2v2h-2z M11 18h3v1h-3z M9 19h1v2H9z M0 9h2v1H0z M3 9h3v2H3z M2 12h3v1H2z"/></svg><span><b>No account: QR pairing.</b> Scan the code on the box, allow alerts, done. No email, no password.</span></div>
+    </div>
+    <div class="card">
+      <div class="ui-head"><span class="badge b-ice">Home Assistant</span><h3>Smart-home native</h3></div>
+      <div class="rows">
+        <div><span>Health score</span><b class="ok">82 / 100</b></div>
+        <div><span>Coil fouling</span><b class="watch">35 %</b></div>
+        <div><span>Air − coil gap</span><b>7.2 °C</b></div>
+        <div><span>Ice on coil</span><b class="ok">No</b></div>
+      </div>
+      <div class="one">Auto-discovered over MQTT. Fully local.</div>
+    </div>
+  </div>
+  <div class="trust">
+    <div><b>UNO Q · your home</b><span>raw sound, temperatures stay here</span></div><i></i>
+    <div class="aiven"><b>Aiven · EU, Finland</b><span>4 statuses only. Run history shows when you're home: encrypted, ISO 27001, SOC 2</span></div><i></i>
+    <div><b>Your phone</b><span>paired by QR, no name or email stored</span></div>
+  </div>
+  <div class="cra"><b>CRA-ready</b> secure by default · insert-only device key · TLS verified both ends · vulnerability reporting · updates + SBOM</div>
+  <div class="foot">Aiven PostgreSQL + Runtime, europe-north1 · SOC 2 Type II, ISO 27001, GDPR · CRA (EU) 2024/2847: reporting since 11 Sep 2026, all rules 11 Dec 2027</div>
+  <div class="num">6</div>
+</section>
+
+<!-- 7. Business model -->
+<section class="slide biz">
+  <div class="kicker">Business model</div>
+  <h2>€179 once. Edge AI checks it every second.</h2>
+  <div class="grid" style="grid-template-columns: 1fr 1.1fr; gap: 28px; flex:1; min-height:0">
+    <div class="card">
+      <h3>Cost per unit</h3>
+      <table class="tbl">
+        <tr><td>Arduino UNO Q</td><td>€38</td></tr>
+        <tr><td>Tiny microphone</td><td>€3</td></tr>
+        <tr><td>Probes, sensors, buzzer</td><td>€9</td></tr>
+        <tr><td>Enclosure, magnets, power</td><td>€17</td></tr>
+        <tr class="total"><td>BOM</td><td>€67</td></tr>
+        <tr><td>Assembly, test, logistics</td><td>€15</td></tr>
+        <tr class="total"><td>COGS</td><td>€82</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Where €179 goes <span style="font-size:14px; color:var(--dim); font-weight:500">Pro user, direct</span></h3>
+      <div class="wf">
+        <div class="wf-row"><span>Retail price</span><div class="bar"><i style="width:100%"></i></div><b>€179</b></div>
+        <div class="wf-row neg"><span>VAT 25.5 %</span><div class="bar"><i style="width:20.3%; margin-left:79.7%"></i></div><b>−€36</b></div>
+        <div class="wf-row neg"><span>Shipping, payment</span><div class="bar"><i style="width:5.6%; margin-left:74.1%"></i></div><b>−€10</b></div>
+        <div class="wf-row rev"><span>Our revenue</span><div class="bar"><i style="width:74.1%"></i></div><b>€133</b></div>
+        <div class="wf-row neg"><span>COGS</span><div class="bar"><i style="width:45.8%; margin-left:28.3%"></i></div><b>−€82</b></div>
+        <div class="wf-row gp"><span>Gross profit</span><div class="bar"><i style="width:28.3%"></i></div><b>€51</b></div>
+      </div>
+      <div class="duo">
+        <div>Pro user, direct €179<b>€51 · 38 %</b></div>
+        <div>Via partner €249<b>€57 · 41 %</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="value">
+    <div><span>Service visit</span><b>€150–300</b><span>looks once a year</span></div>
+    <div><span>Cloud AI</span><b>≈ €300 / 5 yr</b><span>streams 83 GB of your sound a month</span></div>
+    <div class="us"><span>Heat Pump Doctor, direct</span><b>€179 once</b><span>AI on the UNO Q: 86 400 checks a day, offline, ≈ €4 / yr power</span></div>
+  </div>
+  <div class="foot">Direct: no channel margin, Pro users get €70 off (partners €249, keep 30 %). Payback &lt; 1 yr at 15 % loss. Our estimates: cloud ≈ €5 / month per 16 kHz stream, board ≈ 3 W. Deep clean €150–300 (Prisma).</div>
+  <div class="num">7</div>
+</section>
+
+<!-- 8. Go-to-market -->
+<section class="slide">
+  <div class="kicker">Go-to-market</div>
+  <h2>Finland first, then fast growth</h2>
+  <div class="grid" style="grid-template-columns: 1.5fr 1fr; gap: 28px; flex:1; min-height:0">
+    <div class="card">
+      <table class="plan">
+        <tr class="head"><td></td><td>Year 1<small>Finland</small></td><td>Year 2<small>Nordics</small></td><td>Year 3<small>EU</small></td></tr>
+        <tr><td>Units</td><td>3 000</td><td>20 000</td><td>100 000</td></tr>
+        <tr><td>Revenue</td><td>€0.4 M</td><td>€2.7 M</td><td>€13.7 M</td></tr>
+        <tr><td>Gross profit</td><td>€0.16 M<small class="pct">39 %</small></td><td>€1.2 M<small class="pct">45 %</small></td><td>€7.2 M<small class="pct">53 %</small></td></tr>
+        <tr class="profit"><td>Operating profit</td><td class="neg">−€0.24 M</td><td>€0.02 M</td><td>€2.7 M</td></tr>
+      </table>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:20px">
+      <div class="card steps">
+        <div><b>Y1 · Finland</b>Pro users, €179 direct</div>
+        <div><b>Y2 · Nordics</b>+ energy companies: fleet view on Aiven</div>
+        <div><b>Y3 · EU</b>Partners carry volume, CRA + GDPR ready</div>
+      </div>
+      <div class="card pro">
+        <span class="badge b-ice">Entry: Pro users · €179</span>
+        <h3>Energy-aware homeowners</h3>
+        <p style="font-size:17px">Watch spot prices, run Home Assistant. Self-install, buy direct: no channel margin.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Our estimates. Direct €179 / partner €249, direct share 70 → 50 → 30 %. COGS €82 → €75 → €65. Operating costs €0.4 M → €1.2 M → €4.5 M.</div>
+  <div class="num">8</div>
+</section>
+
+<!-- Team -->
+<section class="slide team">
+  <div class="kicker">The team</div>
+  <h2>The Meat Proxies</h2>
+  <div class="grid g3 crew">
+    <div class="card"><img src="../img/ari.jpg" alt="Ari"><b>Ari</b><span>Founder</span></div>
+    <div class="card"><img src="../img/otso.jpg" alt="Otso"><b>Otso</b><span>Founder</span></div>
+    <div class="card"><img src="../img/svante.jpg" alt="Svante"><b>Svante</b><span>Founder</span></div>
+  </div>
+  <div class="banner">Three founders spent a sleepless weekend <b>so that you do not have to.</b></div>
+  <div class="foot">Built in 48 h at Junction 2026 · Arduino UNO Q, Edge Impulse, Aiven · Arduino Project Hub: Junction Finland 2026</div>
+  <div class="num"></div>
+</section>
+
+</div>
+<div id="hint">← → or click to navigate · P to print / save as PDF</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const stage = document.getElementById('stage');
+  let i = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) show(i + 1);
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) show(i - 1);
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'p') print();
+  });
+  addEventListener('click', e => show(e.clientX < innerWidth / 3 ? i - 1 : i + 1));
+  slides.forEach((s, k) => { const n = s.querySelector('.num'); if (n) n.textContent = k + 1; });
+  fit(); show(i);
+</script>
+</body>
+</html>
