@@ -89,7 +89,7 @@ def bandpass(x, lo, hi):
 
 def add_noise(x, noise, snr_db, rng):
     """Mix a random stretch of a noise clip into x at the given SNR (relative to x)."""
-    n = noise[np.abs(noise) > 1e-4] if np.any(np.abs(noise) > 1e-4) else noise
+    n = noise
     reps = int(np.ceil(len(x) / len(n))) + 1
     n = np.tile(n, reps)
     start = rng.integers(0, len(n) - len(x))
