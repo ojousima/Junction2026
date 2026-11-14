@@ -29,21 +29,25 @@ uvicorn app:app --port 8080                  # open http://localhost:8080
 
 ## Deploy on Aiven Runtime
 
-1. **Database table** (once, as an admin on the Aiven PostgreSQL):
-   run [`../schema/health_status.sql`](../schema/health_status.sql). The board's
-   `sensor_writer` may only insert. The app creates its own `cloud` schema
-   (push subscriptions, alert state) at startup, so its database user needs
-   `CREATE` on the database and `SELECT` on `sensors.health_status`.
+1. **Database tables** (once, as an admin on the Aiven PostgreSQL):
+   run [`../schema/health_status.sql`](../schema/health_status.sql), create an Aiven
+   service user named `cloud_dashboard`, then run
+   [`../schema/cloud_dashboard.sql`](../schema/cloud_dashboard.sql). The board's
+   `sensor_writer` may only insert health rows; the dashboard user can read health
+   rows and manage its own subscriptions and alert state, without schema or database
+   creation privileges.
 2. **Deploy** in the Aiven Console: Runtime > Deploy application > this GitHub repo,
    branch `main`, build path `cloud/`, Containerfile `cloud/Containerfile`, port
    `8080` (HTTP). Aiven serves it over HTTPS on its public URL.
-3. **Connect PostgreSQL**: add the PostgreSQL service as an integration. Runtime injects
-   the connection string as `DATABASE_URL`.
+3. **Connect PostgreSQL**: add the PostgreSQL service as an integration, select the
+   `cloud_dashboard` user and map its connection string to `DATABASE_URL`. Runtime injects the base64-encoded project CA
+   as `PROJECT_CA_CERT`; the app uses it to verify the server certificate and hostname.
 4. **Environment variables**:
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (mark as Secret) from `python app.py --gen-vapid`
    - `VAPID_SUBJECT`: a contact URI for push services, e.g. `mailto:<team address>`
-   - optional `AIVEN_CA_CERT`: the project CA certificate (PEM) for verified TLS;
-     without it the connection uses the URI's `sslmode` (encrypted, not verified)
+   - optional `AIVEN_CA_CERT`: the project CA certificate as PEM text; overrides
+     `PROJECT_CA_CERT`. If neither is set, the connection uses the URI's `sslmode`,
+     which may not verify the server certificate.
    - optional `PUSH_POLL_SECONDS` (default 15)
 5. Redeploys are manual: "Deploy latest commit" after merging changes.
 
