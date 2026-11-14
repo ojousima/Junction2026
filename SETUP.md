@@ -111,13 +111,23 @@ temperature sensor is currently connected.
    require internet on the board.
 
 The cloud health API can also report the UNO Q's Wi-Fi IPv4 address. Because the
-app runs in a bridged container, install this separate NetworkManager dispatcher on
-the board after deploying the updated app:
+app runs in a bridged container, install this separate NetworkManager dispatcher
+after deploying the updated app. First, from the repository on the Mac, copy the
+helper using either USB or Wi-Fi:
 
-```bash
-sudo install -o root -g root -m 755 ~/ArduinoApps/heatpump-doctor/tools/heatpump-lan-ip /etc/NetworkManager/dispatcher.d/95-heatpump-lan-ip
+~~~bash
+# USB
+adb push tools/heatpump-lan-ip /home/arduino/heatpump-lan-ip
+# Or Wi-Fi
+scp tools/heatpump-lan-ip uno-q:/home/arduino/heatpump-lan-ip
+~~~
+
+Then run on the board:
+
+~~~bash
+sudo install -o root -g root -m 755 /home/arduino/heatpump-lan-ip /etc/NetworkManager/dispatcher.d/95-heatpump-lan-ip
 sudo /etc/NetworkManager/dispatcher.d/95-heatpump-lan-ip wlan0 up
-```
+~~~
 
 The helper writes the host `wlan0` address and current boot ID to `data/board-lan-ip`
 for the container and clears them on Wi-Fi disconnect. The app ignores stale files from
