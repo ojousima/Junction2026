@@ -14,6 +14,7 @@ Environment:
   PUSH_POLL_SECONDS  how often new alerts are checked (default 15)
 """
 import base64
+import ipaddress
 import json
 import os
 import sys
@@ -24,6 +25,7 @@ import uuid
 from contextlib import asynccontextmanager, closing
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -37,6 +39,11 @@ VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
 VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:admin@example.com").strip()
 POLL_S = float(os.environ.get("PUSH_POLL_SECONDS", "15"))
+PUSH_SERVICE_HOSTS = {
+    "fcm.googleapis.com",
+    "updates.push.services.mozilla.com",
+    "web.push.apple.com",
+}
 
 
 
@@ -200,15 +207,52 @@ def api_status(device: str):
 # --- Web push ---------------------------------------------------------------------
 def send_push(sub, payload):
     """Send one notification; returns False if the subscription is gone."""
+    if not valid_push_endpoint(sub.get("endpoint")):
+        return False
+
     from pywebpush import WebPushException, webpush
+
     try:
-        webpush(subscription_info=sub, data=json.dumps(payload), vapid_private_key=VAPID_PRIVATE,
-                vapid_claims={"sub": VAPID_SUBJECT}, ttl=3600)
+        with push_requests_session() as session:
+            webpush(subscription_info=sub, data=json.dumps(payload), vapid_private_key=VAPID_PRIVATE,
+                    vapid_claims={"sub": VAPID_SUBJECT}, ttl=3600, requests_session=session)
         return True
     except WebPushException as e:
         status = getattr(e.response, "status_code", None)
         print(f"push failed ({status}): {e}", flush=True)
         return status not in (404, 410)
+
+
+def valid_push_endpoint(endpoint):
+    if not isinstance(endpoint, str):
+        return False
+    try:
+        parsed = urlsplit(endpoint)
+        host = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return False
+    if (parsed.scheme != "https" or not host or parsed.username or parsed.password
+            or port not in (None, 443)):
+        return False
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        return False
+    return host.lower() in PUSH_SERVICE_HOSTS
+
+
+def push_requests_session():
+    import requests
+
+    class NoRedirectSession(requests.Session):
+        def request(self, method, url, **kwargs):
+            kwargs["allow_redirects"] = False
+            return super().request(method, url, **kwargs)
+
+    return NoRedirectSession()
 
 
 @app.get("/api/push/key")
@@ -220,7 +264,7 @@ def api_push_key():
 async def api_subscribe(req: Request):
     body = await req.json()
     sub, device = body.get("subscription") or {}, valid_device(body.get("device"))
-    if not str(sub.get("endpoint", "")).startswith("https://") or "keys" not in sub:
+    if not valid_push_endpoint(sub.get("endpoint")) or "keys" not in sub:
         raise HTTPException(400, "bad subscription")
     store.subscribe(device, sub)
     return {"ok": True}
