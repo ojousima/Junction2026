@@ -182,6 +182,10 @@ def main():
                     help="normal clips per fan/voltage (CANDAS) or per machine id (MIMII); default 60")
     ap.add_argument("--test-share", type=float, default=0.2, help="share of normal clips kept for testing")
     args = ap.parse_args()
+    if args.per_class <= 0:
+        ap.error("--per-class must be greater than zero")
+    if not 0 <= args.test_share <= 1:
+        ap.error("--test-share must be a finite number between 0 and 1")
     if not shutil.which("ffmpeg"):
         sys.exit("ffmpeg not found: brew install ffmpeg (or apt install ffmpeg)")
 
