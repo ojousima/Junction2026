@@ -3,7 +3,8 @@ from unittest.mock import patch
 
 import requests
 
-from cloud import app as cloud_app
+with patch.dict("os.environ", {"DATABASE_URL": ""}):
+    from cloud import app as cloud_app
 
 
 class PushEndpointTests(unittest.TestCase):
