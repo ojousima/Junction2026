@@ -37,8 +37,8 @@ class PushEndpointTests(unittest.TestCase):
         self.assertFalse(request.call_args.kwargs["allow_redirects"])
 
     def test_existing_untrusted_subscription_is_not_sent(self):
-        self.assertFalse(cloud_app.send_push(
-            {"endpoint": "https://169.254.169.254/latest"}, {}))
+        self.assertEqual(cloud_app.send_push(
+            {"endpoint": "https://169.254.169.254/latest"}, {}), "expired")
 
 
 if __name__ == "__main__":

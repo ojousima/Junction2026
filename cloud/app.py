@@ -206,9 +206,10 @@ def api_status(device: str):
 
 # --- Web push ---------------------------------------------------------------------
 def send_push(sub, payload):
-    """Send one notification; returns False if the subscription is gone."""
+    """Send one notification; return sent, expired, or retry."""
     if not valid_push_endpoint(sub.get("endpoint")):
-        return False
+        print("push rejected: unapproved endpoint", flush=True)
+        return "expired"
 
     from pywebpush import WebPushException, webpush
 
@@ -216,11 +217,11 @@ def send_push(sub, payload):
         with push_requests_session() as session:
             webpush(subscription_info=sub, data=json.dumps(payload), vapid_private_key=VAPID_PRIVATE,
                     vapid_claims={"sub": VAPID_SUBJECT}, ttl=3600, requests_session=session)
-        return True
+        return "sent"
     except WebPushException as e:
         status = getattr(e.response, "status_code", None)
         print(f"push failed ({status}): {e}", flush=True)
-        return status not in (404, 410)
+        return "expired" if status in (404, 410) else "retry"
 
 
 def valid_push_endpoint(endpoint):
@@ -255,6 +256,29 @@ def push_requests_session():
     return NoRedirectSession()
 
 
+def push_alert(device, component, text, pending):
+    """Attempt an alert for pending recipients; return True when all are handled."""
+    key = (device, component)
+    if key not in pending:
+        pending[key] = {
+            sub["endpoint"]: sub for _, sub in store.subscriptions(device)
+        }
+
+    payload = {"title": "Heat pump: action needed", "body": text,
+               "device": device, "tag": f"{device}-{component}"}
+    for endpoint, sub in list(pending[key].items()):
+        result = send_push(sub, payload)
+        if result == "expired":
+            store.unsubscribe(endpoint)
+        if result in ("sent", "expired"):
+            del pending[key][endpoint]
+
+    if pending[key]:
+        return False
+    del pending[key]
+    return True
+
+
 @app.get("/api/push/key")
 def api_push_key():
     return {"publicKey": VAPID_PUBLIC or None}
@@ -283,13 +307,18 @@ async def api_push_test(req: Request):
         raise HTTPException(503, "push not configured")
     n = 0
     for _, sub in store.subscriptions(device):
-        n += send_push(sub, {"title": "Heat Pump Doctor", "body": "Test: alerts are working.",
-                             "device": device, "tag": "test"})
+        result = send_push(sub, {"title": "Heat Pump Doctor", "body": "Test: alerts are working.",
+                                 "device": device, "tag": "test"})
+        if result == "sent":
+            n += 1
+        elif result == "expired":
+            store.unsubscribe(sub["endpoint"])
     return {"sent": n}
 
 
 def push_loop():
     """Push when a component becomes 'alert' (once per transition, not every poll)."""
+    pending = {}
     while True:
         try:
             for device in {d for d, _ in store.subscriptions()}:
@@ -298,12 +327,11 @@ def push_loop():
                     if c["level"] == seen.get(comp):
                         continue
                     if c["level"] == "alert" and VAPID_PRIVATE:
-                        payload = {"title": "Heat pump: action needed", "body": c["text"],
-                                   "device": device, "tag": f"{device}-{comp}"}
-                        for _, sub in store.subscriptions(device):
-                            if not send_push(sub, payload):
-                                store.unsubscribe(sub["endpoint"])
-                    store.set_alert_state(device, comp, c["level"])
+                        if push_alert(device, comp, c["text"], pending):
+                            store.set_alert_state(device, comp, c["level"])
+                    else:
+                        pending.pop((device, comp), None)
+                        store.set_alert_state(device, comp, c["level"])
         except Exception as e:  # keep the loop alive through DB hiccups
             print(f"push loop error: {e}", flush=True)
         time.sleep(POLL_S)
