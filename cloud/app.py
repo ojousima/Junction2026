@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager, closing
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
 STATIC = Path(__file__).parent / "static"
@@ -217,8 +217,7 @@ def api_push_key():
 
 
 @app.post("/api/push/subscribe")
-async def api_subscribe(req: Request):
-    body = await req.json()
+def api_subscribe(body: dict):
     sub, device = body.get("subscription") or {}, valid_device(body.get("device"))
     if not str(sub.get("endpoint", "")).startswith("https://") or "keys" not in sub:
         raise HTTPException(400, "bad subscription")
@@ -227,14 +226,14 @@ async def api_subscribe(req: Request):
 
 
 @app.post("/api/push/unsubscribe")
-async def api_unsubscribe(req: Request):
-    store.unsubscribe((await req.json()).get("endpoint", ""))
+def api_unsubscribe(body: dict):
+    store.unsubscribe(body.get("endpoint", ""))
     return {"ok": True}
 
 
 @app.post("/api/push/test")
-async def api_push_test(req: Request):
-    device = valid_device((await req.json()).get("device"))
+def api_push_test(body: dict):
+    device = valid_device(body.get("device"))
     if not VAPID_PRIVATE:
         raise HTTPException(503, "push not configured")
     n = 0
