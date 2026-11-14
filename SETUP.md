@@ -80,7 +80,7 @@ Example apps worth reading on the board: `~/.local/share/arduino-app-cli/example
 
 ## Cloud telemetry
 
-The app can publish the latest real Thermo reading to PostgreSQL every 60
+The app can publish the latest real Thermo reading to PostgreSQL every 5
 seconds. Audio and video cloud telemetry are placeholders only; local analytics
 are unchanged. The app keeps running locally if telemetry is not configured or
 the database is unreachable. The [schema contract](schema/README.md) describes

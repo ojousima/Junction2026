@@ -51,7 +51,7 @@ uvicorn app:app --port 8080                  # open http://localhost:8080
    - optional `AIVEN_CA_CERT`: the project CA certificate as PEM text; overrides
      `PROJECT_CA_CERT`. If neither is set, the connection uses the URI's `sslmode`,
      which may not verify the server certificate.
-   - optional `PUSH_POLL_SECONDS` (default 15)
+   - optional `PUSH_POLL_SECONDS` (default 5)
 5. Redeploys are manual: "Deploy latest commit" after merging changes.
 
 On PostgreSQL startup, logs identify which CA variable is selected and whether its
@@ -69,9 +69,11 @@ Health check: `GET /healthz`.
   add the page to the Home Screen (Share > Add to Home Screen) and open it from there;
   Safari only allows web push for installed apps. "Send a test alert" checks the chain.
 - A push is sent once when a component turns **Action** (alert). Watch-level changes
-  and recoveries only show on the dashboard. The board publishes every
-  `TELEMETRY_INTERVAL_SECONDS` (default 60 s), and the app checks every
-  `PUSH_POLL_SECONDS`, so an alert reaches the phone within about 1-2 minutes.
+  and recoveries only show on the dashboard. Defaults are set for the demo: the board
+  publishes every `TELEMETRY_INTERVAL_SECONDS` (5 s), the app checks for alerts every
+  `PUSH_POLL_SECONDS` (5 s) and the open page refreshes every 5 s, so a change shows on
+  the phone within about 10 s. For long unattended runs raise the board interval
+  (e.g. 60 s) to keep the database small.
 - "Sensor offline" shows when the board has not reported for 10 minutes.
 
 ## Limits (hackathon scope)

@@ -222,7 +222,7 @@ $('testBtn').onclick = async () => {
 
 load();
 pushState();
-setInterval(load, 30000);
+setInterval(load, 5000);   // 5 s for the demo
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 </script>
 </body>
