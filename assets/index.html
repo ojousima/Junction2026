@@ -66,6 +66,7 @@
       <div class="bar" id="dbar"><div id="dprog"></div></div>
       <div class="value" style="margin-top:8px"><span id="dscore">–</span><span class="unit" id="dthr"></span></div>
       <ul id="reasons"></ul>
+      <div class="legend" id="eiline" style="display:none"></div>
       <button id="reset" type="button">Re-learn this unit</button>
     </div>
     <div>
@@ -195,6 +196,15 @@ function showDetector(d) {
   }
 }
 
+function showEI(e) {
+  const el = $('eiline');
+  if (!e || !e.available) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.textContent = 'Edge Impulse model: ' + (e.mode === 'learning'
+    ? 'calibrating to this unit… score ' + fmt(e.score, 2)
+    : fmt(e.score, 2) + ' / ' + fmt(e.threshold, 2) + (e.unusual ? ' (unusual)' : ' (normal)'));
+}
+
 $('reset').onclick = async () => {
   if (!window.confirm('Forget what was learned and learn this unit again?')) return;
   await fetch('/api/baseline/reset', { method: 'POST' });
@@ -212,6 +222,7 @@ async function tick() {
     $('peak').textContent = fmt(s.peak_hz, 0);
     $('f0').textContent = fmt(s.comp_f0_hz, 1);
     if (s.detector) showDetector(s.detector);
+    showEI(s.ei);
     drawScore(s.history || [], s.detector && s.detector.threshold);
     $('bright').textContent = fmt(s.cam_brightness, 0);
     const parts = [s.temp_c !== null ? 'thermo ok' : '<span class="off">thermo –</span>',

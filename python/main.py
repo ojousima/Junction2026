@@ -23,6 +23,7 @@ from arduino.app_utils import App, Bridge
 
 import telemetry
 from detector import Detector
+from ei_model import EIModel
 from physics_features import FEATURE_NAMES, features
 
 MIC_DEVICE = "plughw:CARD=Camera,DEV=0"
@@ -45,10 +46,12 @@ state = {
     "comp_f0_hz": None,
     "detector": {"mode": "learning", "progress": 0.0, "score": None, "threshold": None,
                  "alarm": False, "reasons": []},
+    "ei": {"available": False},
 }
 physics = []  # latest physics feature vector, for the CSV log
 history = deque(maxlen=HISTORY_S)  # (t, temp_c, rh, rms_dbfs, peak_hz, anomaly_score)
 detector = Detector("/app/data/baseline.npz")
+ei_model = EIModel()  # Edge Impulse .eim in model/, if present
 latest_jpeg = None
 sample_times = {"thermo": None}
 
@@ -120,13 +123,18 @@ def mic_loop():
                     bands_db, rms_dbfs, peak_hz = band_features(x)
                     feats = features(x)
                     det = detector.update(feats)
+                    try:
+                        ei = ei_model.update(x)
+                    except Exception as e:  # never let the model stop the mic loop
+                        print(f"edge impulse model error: {e}")
+                        ei_model.path, ei = None, {"available": False}
                     if det["alarm"] != alarm_was:
                         set_alarm(det["alarm"])
                         alarm_was = det["alarm"]
                     with lock:
                         physics = [round(float(v), 3) for v in feats]
                         state.update(mic_ok=True, rms_dbfs=round(float(rms_dbfs), 1), peak_hz=round(peak_hz),
-                                     bands_db=[round(float(b), 1) for b in bands_db], detector=det,
+                                     bands_db=[round(float(b), 1) for b in bands_db], detector=det, ei=ei,
                                      comp_f0_hz=round(float(feats[FEATURE_NAMES.index("comp_f0_hz")]), 1))
         except Exception as e:
             with lock:
@@ -172,7 +180,7 @@ def log_loop():
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["t", "label", "temp_c", "rh", "rms_dbfs", "peak_hz", "cam_brightness",
-                    "anomaly_score", "anomaly_threshold", "alarm"]
+                    "anomaly_score", "anomaly_threshold", "alarm", "ei_score", "ei_threshold"]
                    + [f"band{i}" for i in range(N_BANDS)] + FEATURE_NAMES)
         while True:
             time.sleep(1)
@@ -183,7 +191,8 @@ def log_loop():
             t = time.time()
             history.append((round(t, 1), s["temp_c"], s["rh"], s["rms_dbfs"], s["peak_hz"], d["score"]))
             w.writerow([round(t, 1), "unlabeled", s["temp_c"], s["rh"], s["rms_dbfs"], s["peak_hz"],
-                        s["cam_brightness"], d["score"], d["threshold"], int(d["alarm"])]
+                        s["cam_brightness"], d["score"], d["threshold"], int(d["alarm"]),
+                        s["ei"].get("score"), s["ei"].get("threshold")]
                        + s["bands_db"] + ph)
             f.flush()
 
@@ -200,6 +209,7 @@ def api_state():
 def api_reset_baseline():
     """Forget this unit's baseline and learn again (e.g. after moving the sensor)."""
     detector.reset()
+    ei_model.reset()
     set_alarm(False)
     return {"ok": True}
 
