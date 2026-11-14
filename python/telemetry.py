@@ -117,7 +117,7 @@ def run(snapshot):
         print("telemetry configuration error: PGSSLROOTCERT file not found", flush=True)
         return
     try:
-        interval = float(os.environ.get("TELEMETRY_INTERVAL_SECONDS", "60"))
+        interval = float(os.environ.get("TELEMETRY_INTERVAL_SECONDS", "5"))
         if not math.isfinite(interval) or interval <= 0:
             raise ValueError
     except ValueError:

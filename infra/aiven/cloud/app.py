@@ -12,7 +12,7 @@ Environment:
   VAPID_PUBLIC_KEY   web push keys, generate once with:  python app.py --gen-vapid
   VAPID_PRIVATE_KEY
   VAPID_SUBJECT      contact for push services, e.g. mailto:team@example.com
-  PUSH_POLL_SECONDS  how often new alerts are checked (default 15)
+  PUSH_POLL_SECONDS  how often new alerts are checked (default 5)
 """
 import base64
 import ipaddress
@@ -39,7 +39,7 @@ DEMO = not DB_URL
 VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
 VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:admin@example.com").strip()
-POLL_S = float(os.environ.get("PUSH_POLL_SECONDS", "15"))
+POLL_S = float(os.environ.get("PUSH_POLL_SECONDS", "5"))
 PUSH_SERVICE_HOSTS = {
     "fcm.googleapis.com",
     "updates.push.services.mozilla.com",
