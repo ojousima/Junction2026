@@ -16,9 +16,11 @@ import csv
 import io
 import json
 import random
+import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import urllib.parse
 import urllib.request
 import zipfile
@@ -34,10 +36,16 @@ CANDAS_FILE = "https://huggingface.co/datasets/IoTDataAtelier/CANDAS/resolve/mai
 MIMII_FAN_ZIP = "https://zenodo.org/api/records/3678171/files/dev_data_fan.zip/content"
 HEATPUMP_ZIP = "https://zenodo.org/api/records/18619500/files/Stimuli.zip/content"
 ESC50_ZIP = "https://codeload.github.com/karolpiczak/ESC-50/zip/refs/heads/master"
+SPEECH_TGZ = "https://www.openslr.org/resources/31/dev-clean-2.tar.gz"  # Mini LibriSpeech
+# Healthy outdoor units from Freesound (public HQ previews; originals need a login)
+FREESOUND_UNITS = {
+    "freesound-701332-ac-heatpump": "https://cdn.freesound.org/previews/701/701332_13237592-hq.mp3",
+}
 
 # ESC-50 classes that sound like the outdoors around a heat pump.
 ESC50_NOISE = ["rain", "wind", "thunderstorm", "crickets", "chirping_birds",
-               "engine", "car_horn", "footsteps", "dog", "airplane"]
+               "engine", "car_horn", "footsteps", "dog", "airplane",
+               "helicopter", "train", "siren", "chainsaw", "laughing", "coughing"]
 
 
 def fetch(url, dest, quiet=False):
@@ -186,9 +194,36 @@ def noise(per_class):
     print(f"Noise: {n} clips")
 
 
+# --- Mini LibriSpeech: people talking near the outdoor unit ------------------------
+def speech(n_clips):
+    out = ROOT / "noise"
+    tar = tarfile.open(fetch(SPEECH_TGZ, RAW / "speech" / "dev-clean-2.tar.gz"))
+    members = sorted((m for m in tar.getmembers() if m.isfile() and m.name.endswith(".flac")),
+                     key=lambda m: m.name)
+    random.Random(5).shuffle(members)
+    n = 0
+    for m in members[:n_clips]:
+        # Build our own file name; never trust paths stored inside the archive.
+        stem = re.sub(r"[^0-9A-Za-z-]", "", Path(m.name).stem)
+        dest = out / f"speech_{stem}.wav"
+        if not dest.exists():
+            to_16k(tar.extractfile(m).read(), dest)
+        n += 1
+    print(f"Speech: {n} clips")
+
+
+# --- Freesound outdoor units: extra healthy units for data/audio/rig ---------------
+def freesound_units():
+    out = ROOT / "rig" / "training" / "normal"
+    for name, url in FREESOUND_UNITS.items():
+        raw = fetch(url, RAW / "freesound" / f"{name}.mp3")
+        to_16k(raw, out / f"{name}.wav")
+    print(f"Freesound units: {len(FREESOUND_UNITS)}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--only", choices=["candas", "mimii_fan", "heatpump_ref", "noise"])
+    ap.add_argument("--only", choices=["candas", "mimii_fan", "heatpump_ref", "noise", "speech", "freesound"])
     ap.add_argument("--per-class", type=int, default=60,
                     help="normal clips per fan/voltage (CANDAS) or per machine id (MIMII); default 60")
     ap.add_argument("--test-share", type=float, default=0.2, help="share of normal clips kept for testing")
@@ -205,6 +240,8 @@ def main():
         "mimii_fan": lambda: mimii_fan(args.per_class, args.test_share),
         "heatpump_ref": heatpump_ref,
         "noise": lambda: noise(min(args.per_class, 40)),
+        "speech": lambda: speech(80),
+        "freesound": freesound_units,
     }
     for key, step in steps.items():
         if args.only in (None, key):

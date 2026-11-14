@@ -22,7 +22,7 @@
   h1 { font-size: 18px; margin: 0; }
   #status { color: var(--muted); font-size: 13px; }
   main { padding: 0 16px 16px; display: grid; gap: 12px;
-         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+         grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
   .tiles { grid-column: 1 / -1; display: grid; gap: 12px;
            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
@@ -35,6 +35,22 @@
   .legend { font-size: 12px; color: var(--muted); display: flex; gap: 12px; margin-top: 6px; }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
   .off { color: var(--bad); }
+  .detector { grid-column: 1 / -1; display: grid; gap: 12px; grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); }
+  .detector > div { min-width: 0; }
+  @media (max-width: 700px) { .detector { grid-template-columns: minmax(0, 1fr); } }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+  .badge.learning { background: color-mix(in srgb, var(--rh) 18%, transparent); color: var(--rh); }
+  .badge.ok { background: color-mix(in srgb, var(--mic) 18%, transparent); color: var(--mic); }
+  .badge.watch { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+  .badge.alarm { background: var(--bad); color: #fff; }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 8px; }
+  .bar > div { height: 100%; background: var(--rh); width: 0; }
+  #reasons { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+  #reasons li { margin: 2px 0; }
+  #reasons .why { color: var(--muted); font-size: 12px; }
+  button { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); cursor: pointer; margin-top: 10px; }
+  #scorechart { height: 140px; }
 </style>
 </head>
 <body>
@@ -43,10 +59,29 @@
   <span id="status">connecting…</span>
 </header>
 <main>
+  <section class="card detector">
+    <div>
+      <h2>Fault detector</h2>
+      <span id="dstate" class="badge learning">starting…</span>
+      <div class="bar" id="dbar"><div id="dprog"></div></div>
+      <div class="value" style="margin-top:8px"><span id="dscore">–</span><span class="unit" id="dthr"></span></div>
+      <ul id="reasons"></ul>
+      <button id="reset" type="button">Re-learn this unit</button>
+    </div>
+    <div>
+      <h2>Anomaly score, last 5 minutes</h2>
+      <canvas id="scorechart"></canvas>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--warn)"></span>score (median of 5 s)</span>
+        <span><span class="dot" style="background:var(--bad)"></span>alarm threshold</span>
+      </div>
+    </div>
+  </section>
   <section class="tiles">
     <div class="card"><div class="label">Temperature</div><div class="value"><span id="t">–</span><span class="unit">°C</span></div></div>
     <div class="card"><div class="label">Humidity</div><div class="value"><span id="rh">–</span><span class="unit">%</span></div></div>
     <div class="card"><div class="label">Sound level</div><div class="value"><span id="rms">–</span><span class="unit">dBFS</span></div></div>
+    <div class="card"><div class="label">Compressor speed</div><div class="value"><span id="f0">–</span><span class="unit">Hz</span></div></div>
     <div class="card"><div class="label">Peak frequency</div><div class="value"><span id="peak">–</span><span class="unit">Hz</span></div></div>
     <div class="card"><div class="label">Camera brightness</div><div class="value"><span id="bright">–</span><span class="unit">/255</span></div></div>
   </section>
@@ -118,6 +153,54 @@ function drawHistory(hist) {
   }
 }
 
+function drawScore(hist, thr) {
+  const [g, w, h] = setupCanvas($('scorechart'));
+  g.clearRect(0, 0, w, h);
+  const pts = hist.filter(r => r[5] !== null && r[5] !== undefined);
+  if (pts.length < 2) return;
+  const t0 = hist[hist.length - 1][0] - 300;
+  const mx = Math.max(thr ? thr * 2 : 1, ...pts.map(r => r[5])) * 1.05;
+  const y = v => h - 4 - v / mx * (h - 8);
+  if (thr) {
+    g.strokeStyle = css('--bad'); g.setLineDash([5, 4]); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(0, y(thr)); g.lineTo(w, y(thr)); g.stroke(); g.setLineDash([]);
+  }
+  g.strokeStyle = css('--warn'); g.lineWidth = 2; g.beginPath();
+  pts.forEach((r, i) => { const x = (r[0] - t0) / 300 * w; i ? g.lineTo(x, y(r[5])) : g.moveTo(x, y(r[5])); });
+  g.stroke();
+}
+
+function showDetector(d) {
+  const st = $('dstate');
+  if (d.mode === 'learning') {
+    st.className = 'badge learning';
+    st.textContent = 'Learning this unit… ' + Math.round(d.progress * 100) + ' %';
+    $('dbar').style.display = ''; $('dprog').style.width = (d.progress * 100) + '%';
+    $('dscore').textContent = '–'; $('dthr').textContent = '';
+  } else {
+    $('dbar').style.display = 'none';
+    const over = d.score > d.threshold;
+    st.className = 'badge ' + (d.alarm ? 'alarm' : over ? 'watch' : 'ok');
+    st.textContent = d.alarm ? 'ALARM: sounds abnormal' : over ? 'Unusual, watching…' : 'Sounds healthy';
+    $('dscore').textContent = fmt(d.score, 2);
+    $('dthr').textContent = ' / ' + fmt(d.threshold, 2) + ' threshold';
+  }
+  const ul = $('reasons'); ul.innerHTML = '';
+  for (const r of d.reasons || []) {
+    const li = document.createElement('li');
+    li.textContent = r.meaning + ' ';
+    const why = document.createElement('span'); why.className = 'why';
+    why.textContent = '(' + r.feature + ' ' + (r.z > 0 ? '↑' : '↓') + ' ' + Math.abs(r.z) + ' σ)';
+    li.appendChild(why); ul.appendChild(li);
+  }
+}
+
+$('reset').onclick = async () => {
+  if (!window.confirm('Forget what was learned and learn this unit again?')) return;
+  await fetch('/api/baseline/reset', { method: 'POST' });
+  tick();
+};
+
 const fmt = (v, d = 1) => v === null || v === undefined ? '–' : Number(v).toFixed(d);
 
 async function tick() {
@@ -127,6 +210,18 @@ async function tick() {
     $('rh').textContent = fmt(s.rh, 0);
     $('rms').textContent = fmt(s.rms_dbfs);
     $('peak').textContent = fmt(s.peak_hz, 0);
+    $('f0').textContent = fmt(s.mic_ok ? s.comp_f0_hz : null, 1);
+    if (s.mic_ok && s.detector) {
+      showDetector(s.detector);
+      drawScore(s.history || [], s.detector.threshold);
+    } else {
+      $('dstate').className = 'badge watch';
+      $('dstate').textContent = 'Detector unavailable: microphone offline';
+      $('dbar').style.display = 'none';
+      $('dscore').textContent = '–'; $('dthr').textContent = '';
+      $('reasons').innerHTML = '';
+      drawScore([], null);
+    }
     $('bright').textContent = fmt(s.cam_brightness, 0);
     const parts = [s.temp_c !== null ? 'thermo ok' : '<span class="off">thermo –</span>',
                    s.mic_ok ? 'mic ok' : '<span class="off">mic –</span>',

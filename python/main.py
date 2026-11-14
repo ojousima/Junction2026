@@ -1,7 +1,9 @@
-"""Heat Pump Doctor: live data view.
+"""Heat Pump Doctor: live data view and self-learning fault detector.
 
-Collects Thermo readings (over the Bridge), microphone band energies and camera frames,
-logs features to CSV under data/, and serves a browser view on port 7000.
+Collects Thermo readings (over the Bridge), microphone band energies and physics
+features, camera frames; learns this unit's healthy sound after start (detector.py),
+scores every second, sounds the Modulino Buzzer on an alarm, logs everything to CSV
+under data/, and serves a browser view on port 7000.
 """
 import csv
 import glob
@@ -20,6 +22,8 @@ from arduino.app_bricks.web_ui import WebUI
 from arduino.app_utils import App, Bridge
 
 import telemetry
+from detector import Detector
+from physics_features import FEATURE_NAMES, features
 
 MIC_DEVICE = "plughw:CARD=Camera,DEV=0"
 CAM_GLOB = "/dev/v4l/by-id/usb-*-video-index0"  # /dev/videoN number changes between boots
@@ -38,8 +42,13 @@ state = {
     "cam_brightness": None,
     "cam_ok": False,
     "mic_ok": False,
+    "comp_f0_hz": None,
+    "detector": {"mode": "learning", "progress": 0.0, "score": None, "threshold": None,
+                 "alarm": False, "reasons": []},
 }
-history = deque(maxlen=HISTORY_S)  # (t, temp_c, rh, rms_dbfs, peak_hz)
+physics = []  # latest physics feature vector, for the CSV log
+history = deque(maxlen=HISTORY_S)  # (t, temp_c, rh, rms_dbfs, peak_hz, anomaly_score)
+detector = Detector("/app/data/baseline.npz")
 latest_jpeg = None
 sample_times = {"thermo": None}
 
@@ -81,7 +90,17 @@ def band_features(x):
     return bands_db, rms_dbfs, peak_hz
 
 
+def set_alarm(on):
+    """Buzzer on the MCU side; never let a Bridge problem stop the mic loop."""
+    try:
+        Bridge.call("alarm", bool(on))
+    except Exception as e:
+        print(f"alarm call failed: {e}")
+
+
 def mic_loop():
+    global physics
+    alarm_was = False
     while True:
         try:
             pcm = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, device=MIC_DEVICE, channels=1, rate=SR,
@@ -99,9 +118,16 @@ def mic_loop():
                     x = np.concatenate(buf)[:SR]
                     buf, n = [], 0
                     bands_db, rms_dbfs, peak_hz = band_features(x)
+                    feats = features(x)
+                    det = detector.update(feats)
+                    if det["alarm"] != alarm_was:
+                        set_alarm(det["alarm"])
+                        alarm_was = det["alarm"]
                     with lock:
+                        physics = [round(float(v), 3) for v in feats]
                         state.update(mic_ok=True, rms_dbfs=round(float(rms_dbfs), 1), peak_hz=round(peak_hz),
-                                     bands_db=[round(float(b), 1) for b in bands_db])
+                                     bands_db=[round(float(b), 1) for b in bands_db], detector=det,
+                                     comp_f0_hz=round(float(feats[FEATURE_NAMES.index("comp_f0_hz")]), 1))
         except Exception as e:
             with lock:
                 state.update(mic_ok=False, rms_dbfs=None, peak_hz=None, bands_db=[])
@@ -145,16 +171,22 @@ def log_loop():
     path = time.strftime("/app/data/live_%Y%m%d_%H%M%S.csv")
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["t", "label", "temp_c", "rh", "rms_dbfs", "peak_hz", "cam_brightness"]
-                   + [f"band{i}" for i in range(N_BANDS)])
+        w.writerow(["t", "label", "temp_c", "rh", "rms_dbfs", "peak_hz", "cam_brightness",
+                    "anomaly_score", "anomaly_threshold", "alarm"]
+                   + [f"band{i}" for i in range(N_BANDS)] + FEATURE_NAMES)
         while True:
             time.sleep(1)
             with lock:
                 s = dict(state)
+                ph = list(physics)
+            d = s["detector"]
             t = time.time()
-            history.append((round(t, 1), s["temp_c"], s["rh"], s["rms_dbfs"], s["peak_hz"]))
+            history.append((round(t, 1), s["temp_c"], s["rh"], s["rms_dbfs"], s["peak_hz"], d["score"]))
             w.writerow([round(t, 1), "unlabeled", s["temp_c"], s["rh"], s["rms_dbfs"], s["peak_hz"],
-                        s["cam_brightness"]] + s["bands_db"])
+                        s["cam_brightness"], d["score"], d["threshold"], int(d["alarm"])]
+                       + (s["bands_db"] + [None] * N_BANDS)[:N_BANDS]
+                       + ((ph + [None] * len(FEATURE_NAMES))[:len(FEATURE_NAMES)]
+                          if s["mic_ok"] else [None] * len(FEATURE_NAMES)))
             f.flush()
 
 
@@ -165,6 +197,13 @@ def api_state():
         s["history"] = list(history)
     s["band_edges_hz"] = [round(float(e)) for e in EDGES]
     return s
+
+
+def api_reset_baseline():
+    """Forget this unit's baseline and learn again (e.g. after moving the sensor)."""
+    detector.reset()
+    set_alarm(False)
+    return {"ok": True}
 
 
 def api_frame():
@@ -183,6 +222,7 @@ def telemetry_snapshot():
 ui = WebUI()
 ui.expose_api("GET", "/api/state", api_state)
 ui.expose_api("GET", "/api/frame.jpg", api_frame)
+ui.expose_api("POST", "/api/baseline/reset", api_reset_baseline)
 
 for target in (mic_loop, cam_loop, log_loop):
     threading.Thread(target=target, daemon=True).start()

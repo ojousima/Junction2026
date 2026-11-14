@@ -55,3 +55,27 @@ see [data/audio/README.md](../data/audio/README.md).
 python3 tools/fetch_audio.py                # everything, about 2.5 GB download
 python3 tools/fetch_audio.py --only candas  # one source
 ```
+
+## rig_augment.py and eval_rig.py
+
+Stretch a few minutes of healthy outdoor-unit audio (`data/audio/rig/training/normal/`)
+into a training and test set: mix in background noise (traffic, aircraft, speech, ...)
+and synthesise faults from heat pump physics for testing. `eval_rig.py` trains a
+per-unit GMM on healthy windows and compares generic band energies with the
+physics features in `python/physics_features.py`. Details: [data/audio/README.md](../data/audio/README.md).
+
+```bash
+.venv/bin/python tools/rig_augment.py   # WAVs for Edge Impulse
+.venv/bin/python tools/eval_rig.py      # AUC per fault, false alarm rate
+```
+
+## replay_detector.py
+
+Plays a rig recording through the device's own detector (`python/physics_features.py`
++ `python/detector.py`) one second at a time: learn, then healthy audio with unseen
+background noise, then 30 s of each synthetic fault. Shows when the dashboard would
+alarm and which reason it would give, without the board.
+
+```bash
+.venv/bin/python tools/replay_detector.py --unit freesound
+```

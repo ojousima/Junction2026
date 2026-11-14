@@ -6,6 +6,12 @@ Edge-AI retrofit sensor that hears heat pump faults and slow efficiency loss (co
 
 - `sketch/`: STM32 sketch (Modulino Thermo, temperature and humidity over the Arduino Bridge). ~~Modulino Movement~~: not available, vibration is detected acoustically
 - `python/`: Linux-side Python app (anomaly score, fouling tracker, dashboard)
+  - `physics_features.py`: 22 features tied to heat pump mechanisms (compressor harmonic
+    series and speed, fan modulation, impacts, off-harmonic tones, band levels); numpy only
+  - `detector.py`: self-learning detector. Learns this unit's healthy sound for 2 min after
+    start, then scores every second (median of 5 s against noise), alarms after 5 s above
+    threshold, names the likely mechanism, keeps learning new healthy operating points.
+    No pre-trained model; "Re-learn this unit" on the dashboard starts over
 - `app.yaml`: Arduino App Lab app definition
 - `data/`: recorded sessions (CSV/WAV/JPG are git-ignored)
 - `infra/aiven/`: Terraform configuration and import instructions for Aiven services
