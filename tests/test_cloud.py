@@ -1,3 +1,7 @@
+import base64
+import binascii
+import sys
+import types
 import unittest
 from unittest.mock import patch
 
@@ -39,6 +43,32 @@ class PushEndpointTests(unittest.TestCase):
     def test_existing_untrusted_subscription_is_not_sent(self):
         self.assertEqual(cloud_app.send_push(
             {"endpoint": "https://169.254.169.254/latest"}, {}), "expired")
+
+
+class DatabaseTLSConfigurationTests(unittest.TestCase):
+    def test_injected_project_ca_enables_server_verification(self):
+        pg = types.ModuleType("psycopg2")
+        pg.extras = types.ModuleType("psycopg2.extras")
+        encoded_ca = base64.b64encode(b"project CA\n").decode("ascii")
+        with patch.dict(sys.modules, {"psycopg2": pg, "psycopg2.extras": pg.extras}), \
+                patch.dict("os.environ", {"AIVEN_CA_CERT": "", "PROJECT_CA_CERT": encoded_ca}), \
+                patch.object(cloud_app.tempfile, "NamedTemporaryFile") as tempfile, \
+                patch.object(cloud_app.Postgres, "run") as run:
+            tempfile.return_value.name = "/tmp/project-ca.pem"
+            db = cloud_app.Postgres("postgresql://example")
+
+        tempfile.return_value.write.assert_called_once_with("project CA\n\n")
+        self.assertEqual(db.kwargs, {"sslmode": "verify-full", "sslrootcert": "/tmp/project-ca.pem"})
+        self.assertEqual(len(run.call_args_list), 3)
+        self.assertTrue(all(call.args[0].startswith("SELECT ") for call in run.call_args_list))
+
+    def test_invalid_injected_ca_fails_explicitly(self):
+        pg = types.ModuleType("psycopg2")
+        pg.extras = types.ModuleType("psycopg2.extras")
+        with patch.dict(sys.modules, {"psycopg2": pg, "psycopg2.extras": pg.extras}), \
+                patch.dict("os.environ", {"AIVEN_CA_CERT": "", "PROJECT_CA_CERT": "not base64!"}), \
+                self.assertRaises(binascii.Error):
+            cloud_app.Postgres("postgresql://example")
 
 
 if __name__ == "__main__":

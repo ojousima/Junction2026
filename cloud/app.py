@@ -7,7 +7,8 @@ status per component and pushes a notification when a component turns "alert".
 Environment:
   DATABASE_URL       Aiven PostgreSQL service URI (injected by the Runtime integration).
                      Without it the app runs in DEMO mode with simulated data.
-  AIVEN_CA_CERT      optional: project CA certificate (PEM text) for verified TLS
+  AIVEN_CA_CERT      project CA certificate (PEM text) for verified TLS
+  PROJECT_CA_CERT    Aiven-injected project CA certificate (base64-encoded PEM)
   VAPID_PUBLIC_KEY   web push keys, generate once with:  python app.py --gen-vapid
   VAPID_PRIVATE_KEY
   VAPID_SUBJECT      contact for push services, e.g. mailto:team@example.com
@@ -66,20 +67,18 @@ class Postgres:
         self.pg, self.extras = psycopg2, psycopg2.extras
         self.kwargs = {}
         ca = os.environ.get("AIVEN_CA_CERT", "").strip()
+        if not ca and os.environ.get("PROJECT_CA_CERT", "").strip():
+            ca = base64.b64decode(os.environ["PROJECT_CA_CERT"].strip(), validate=True).decode("utf-8")
         if ca:  # verified TLS when the CA is provided; otherwise the URI's sslmode applies
             f = tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False)
             f.write(ca + "\n")
             f.close()
             self.kwargs = {"sslmode": "verify-full", "sslrootcert": f.name}
         self.url = url
-        self.run("""
-            CREATE SCHEMA IF NOT EXISTS cloud;
-            CREATE TABLE IF NOT EXISTS cloud.push_subscriptions (
-                endpoint TEXT PRIMARY KEY, device_id UUID NOT NULL, subscription JSONB NOT NULL,
-                created TIMESTAMPTZ NOT NULL DEFAULT now());
-            CREATE TABLE IF NOT EXISTS cloud.alert_state (
-                device_id UUID NOT NULL, component TEXT NOT NULL, level TEXT NOT NULL,
-                time TIMESTAMPTZ NOT NULL, PRIMARY KEY (device_id, component));""")
+        self.run("SELECT endpoint, device_id, subscription, created "
+                 "FROM cloud.push_subscriptions LIMIT 0")
+        self.run("SELECT device_id, component, level, time FROM cloud.alert_state LIMIT 0")
+        self.run("SELECT device_id, time, component, level, message FROM sensors.health_status LIMIT 0")
 
     def run(self, sql, args=(), fetch=False):
         with closing(self.pg.connect(self.url, connect_timeout=10, **self.kwargs)) as conn:
