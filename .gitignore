@@ -61,3 +61,15 @@ data/*.csv
 data/*.wav
 data/*.jpg
 .DS_Store
+
+# Terraform state and local working files can contain credentials.
+.env
+.env.*
+aiven-ca.pem
+!.env.example
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
