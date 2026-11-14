@@ -8,7 +8,7 @@ from unittest.mock import patch
 import requests
 
 with patch.dict("os.environ", {"DATABASE_URL": ""}):
-    from cloud import app as cloud_app
+    from infra.aiven.cloud import app as cloud_app
 
 
 class PushEndpointTests(unittest.TestCase):

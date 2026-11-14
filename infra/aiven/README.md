@@ -115,8 +115,9 @@ files, `.terraform/`, or backend configuration containing passwords.
 ## GitHub Actions
 
 The Aiven Terraform workflow validates pull requests without credentials.
-Changes under `infra/aiven/` merged to `main` automatically plan and apply;
-the workflow can also be started manually on `main`. Deployments are serialized
+Terraform-related changes under `infra/aiven/` merged to `main` automatically plan and apply;
+dashboard-only changes under `infra/aiven/cloud/` do not trigger this workflow.
+The workflow can also be started manually on `main`. Deployments are serialized
 and fail if any of the three existing resources is missing from shared state.
 Automatic apply also refuses plans containing deletions or replacements.
 There is no approval step, so protect `main` and review infrastructure changes

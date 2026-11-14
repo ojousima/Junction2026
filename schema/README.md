@@ -46,4 +46,4 @@ every upload interval: one row per component (`coil`, `fan`, `compressor`, `defr
 with `level` (`unknown`, `ok`, `watch`, `alert`) and a plain English `message`, keyed by
 `device_id` = UUIDv5 of `heat-pump-doctor/<hardware-serial>/heatpump-1`. It is written in
 its own transaction, so a missing table never blocks temperature rows. Read by the
-cloud dashboard in [`cloud/`](../cloud/README.md).
+cloud dashboard in [`infra/aiven/cloud/`](../infra/aiven/cloud/README.md).

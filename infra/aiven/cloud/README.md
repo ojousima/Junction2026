@@ -10,7 +10,7 @@ existing telemetry thread. This app only reads the latest rows and sends web pus
 UNO Q (edge)                          Aiven
 python/health.py  ── telemetry ──▶    PostgreSQL sensors.health_status
                                           │
-                                      Runtime: cloud/app.py ──▶ phone (installable web app)
+                                      Runtime: infra/aiven/cloud/app.py ──▶ phone (installable web app)
                                           └── web push on "alert" (VAPID)
 ```
 
@@ -20,7 +20,7 @@ Without `DATABASE_URL` the app runs in **demo mode** with a simulated heat pump 
 walks through OK, then "getting dirty", then a fan alert every 90 s.
 
 ```bash
-cd cloud
+cd infra/aiven/cloud
 pip install -r requirements.txt
 python app.py --gen-vapid > vapid.env        # once; keep the private key secret
 set -a; . ./vapid.env; set +a
@@ -30,15 +30,18 @@ uvicorn app:app --port 8080                  # open http://localhost:8080
 ## Deploy on Aiven Runtime
 
 1. **Database tables** (once, as an admin on the Aiven PostgreSQL):
-   run [`../schema/health_status.sql`](../schema/health_status.sql), create an Aiven
+   run [`../../../schema/health_status.sql`](../../../schema/health_status.sql), create an Aiven
    service user named `cloud_dashboard`, then run
-   [`../schema/cloud_dashboard.sql`](../schema/cloud_dashboard.sql). The board's
+   [`../../../schema/cloud_dashboard.sql`](../../../schema/cloud_dashboard.sql). The board's
    `sensor_writer` may only insert health rows; the dashboard user can read health
    rows and manage its own subscriptions and alert state, without schema or database
    creation privileges.
 2. **Deploy** in the Aiven Console: Runtime > Deploy application > this GitHub repo,
-   branch `main`, build path `cloud/`, Containerfile `cloud/Containerfile`, port
+   branch `main`, build path `infra/aiven/cloud/`, Containerfile
+   `infra/aiven/cloud/Containerfile`, port
    `8080` (HTTP). Aiven serves it over HTTPS on its public URL.
+   For an existing application, update both paths before redeploying a revision
+   that includes this move.
 3. **Connect PostgreSQL**: add the PostgreSQL service as an integration, select the
    `cloud_dashboard` user and map its connection string to `DATABASE_URL`. Runtime injects the base64-encoded project CA
    as `PROJECT_CA_CERT`; the app uses it to verify the server certificate and hostname.
