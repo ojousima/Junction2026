@@ -1,0 +1,52 @@
+{
+  "base_seed": 42,
+  "duration_seconds": 3600,
+  "feature_columns": [
+    "second",
+    "outside_temp_c",
+    "outgoing_temp_c"
+  ],
+  "format_version": 1,
+  "healthy_count": 100,
+  "sampling_rate_hz": 1,
+  "scenario_catalog": {
+    "healthy": [
+      "steady_mild",
+      "cold_dry",
+      "humid_near_freezing",
+      "normal_multiple_defrosts",
+      "normal_startup",
+      "normal_cycling",
+      "changing_weather",
+      "variable_fan_and_load"
+    ],
+    "unhealthy": [
+      "rapid_frost_accumulation",
+      "frequent_defrost",
+      "prolonged_defrost",
+      "incomplete_defrost",
+      "ineffective_defrost",
+      "slow_recovery",
+      "frost_related_airflow_restriction",
+      "progressive_frost_degradation"
+    ]
+  },
+  "seed_derivation": "NumPy SeedSequence.spawn; per-file seeds are in metadata.csv",
+  "split_by_unit_archetype": {
+    "0": "train",
+    "1": "train",
+    "10": "test",
+    "11": "test",
+    "2": "train",
+    "3": "train",
+    "4": "train",
+    "5": "train",
+    "6": "train",
+    "7": "train",
+    "8": "validation",
+    "9": "validation"
+  },
+  "truth_interpretation": "Ground truth is simulated latent state, not observed data. During fan-off defrost, outgoing_temp_c is a lagged local probe signal, not mass-flow-weighted air.",
+  "unhealthy_count": 100,
+  "with_ground_truth": true
+}
