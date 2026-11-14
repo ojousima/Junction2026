@@ -73,3 +73,9 @@ aiven-ca.pem
 *.tfplan
 crash.log
 crash.*.log
+
+# Audio datasets: keep the folder structure and README, ignore the data itself
+data/audio/**
+!data/audio/**/
+!data/audio/**/.gitkeep
+!data/audio/README.md
