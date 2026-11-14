@@ -12,6 +12,11 @@ Edge-AI retrofit sensor that hears heat pump faults and slow efficiency loss (co
     start, then scores every second (median of 5 s against noise), alarms after 5 s above
     threshold, names the likely mechanism, keeps learning new healthy operating points.
     No pre-trained model; "Re-learn this unit" on the dashboard starts over
+  - `ei_model.py`: second, independent score from the Edge Impulse model
+    `model/heatpump-doctor-rig*.eim` (Edge Impulse project "heatpump-doctor-rig":
+    Spectral Analysis FFT 64 + GMM, trained on 4 healthy outdoor units with background
+    noise). Calibrated per unit during the same learning phase; shown on the dashboard
+    next to our detector. Talks to the .eim over its socket, no extra packages
 - `app.yaml`: Arduino App Lab app definition
 - `data/`: recorded sessions (CSV/WAV/JPG are git-ignored)
 - `infra/aiven/`: Terraform configuration and import instructions for Aiven services
