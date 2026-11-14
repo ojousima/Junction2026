@@ -210,9 +210,18 @@ async function tick() {
     $('rh').textContent = fmt(s.rh, 0);
     $('rms').textContent = fmt(s.rms_dbfs);
     $('peak').textContent = fmt(s.peak_hz, 0);
-    $('f0').textContent = fmt(s.comp_f0_hz, 1);
-    if (s.detector) showDetector(s.detector);
-    drawScore(s.history || [], s.detector && s.detector.threshold);
+    $('f0').textContent = fmt(s.mic_ok ? s.comp_f0_hz : null, 1);
+    if (s.mic_ok && s.detector) {
+      showDetector(s.detector);
+      drawScore(s.history || [], s.detector.threshold);
+    } else {
+      $('dstate').className = 'badge watch';
+      $('dstate').textContent = 'Detector unavailable: microphone offline';
+      $('dbar').style.display = 'none';
+      $('dscore').textContent = '–'; $('dthr').textContent = '';
+      $('reasons').innerHTML = '';
+      drawScore([], null);
+    }
     $('bright').textContent = fmt(s.cam_brightness, 0);
     const parts = [s.temp_c !== null ? 'thermo ok' : '<span class="off">thermo –</span>',
                    s.mic_ok ? 'mic ok' : '<span class="off">mic –</span>',
