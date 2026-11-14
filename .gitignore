@@ -61,3 +61,12 @@ data/*.csv
 data/*.wav
 data/*.jpg
 .DS_Store
+
+# Audio datasets: keep the folder structure and README, ignore the data itself
+data/audio/**
+!data/audio/**/
+!data/audio/**/.gitkeep
+!data/audio/README.md
+
+# Camera and mic smoke-test captures from the board
+data/smoke/
