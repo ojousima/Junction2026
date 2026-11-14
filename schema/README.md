@@ -38,3 +38,12 @@ available sample is retried at the next interval; newer samples can replace it,
 and there is no durable offline queue. The existing measurements table has no
 documented unique constraint: an ambiguous commit or restart can duplicate a
 temperature row. The sensor clock must be correct.
+
+## Health summary
+
+[health_status.sql](health_status.sql) holds the end-user summary the board publishes
+every upload interval: one row per component (`coil`, `fan`, `compressor`, `defrost`)
+with `level` (`unknown`, `ok`, `watch`, `alert`) and a plain English `message`, keyed by
+`device_id` = UUIDv5 of `heat-pump-doctor/<hardware-serial>/heatpump-1`. It is written in
+its own transaction, so a missing table never blocks temperature rows. Read by the
+cloud dashboard in [`cloud/`](../cloud/README.md).

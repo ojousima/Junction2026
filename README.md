@@ -49,3 +49,10 @@ state["coil"] = {
                                                        # without it the page keeps its own
 }
 ```
+
+## Homeowner dashboard (cloud)
+
+The board turns its diagnosis into four plain statuses (`python/health.py`: coil, fan,
+compressor, defrost) and publishes them to Aiven PostgreSQL. [`cloud/`](cloud/README.md) is
+a small app for Aiven Runtime that shows them on the phone ("Fan OK", "Clean the coil")
+and sends a web push notification when something needs action.

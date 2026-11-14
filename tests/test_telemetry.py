@@ -58,10 +58,23 @@ class TelemetryTests(unittest.TestCase):
             with self.assertRaises(StopIteration):
                 telemetry.run(lambda: (self.state, self.times))
         self.assertEqual(connect.call_count, 2)
-        self.assertEqual(execute.call_count, 1)
+        # measurements and health summary go in separate transactions
+        self.assertEqual(execute.call_count, 2)
+        self.assertIn("sensors.measurements", execute.call_args_list[0].args[1])
+        self.assertIn("sensors.health_status", execute.call_args_list[1].args[1])
         self.assertEqual(connect.call_args.kwargs["sslmode"], "verify-full")
-        conn.__exit__.assert_called_once_with(None, None, None)
+        self.assertEqual(conn.__exit__.call_count, 2)
         conn.close.assert_called_once()
+
+    def test_health_rows_one_per_component_with_stable_device_id(self):
+        rows = telemetry.build_health_rows(self.state, self.timestamp, "serial-1")
+        self.assertEqual([r[2] for r in rows], ["coil", "fan", "compressor", "defrost"])
+        self.assertTrue(all(r[0] == telemetry.device_id("serial-1") for r in rows))
+        self.assertEqual(rows[3][3], "ok")  # 21.5 C, 45 %: no frost weather
+
+    def test_no_health_rows_while_everything_is_unknown(self):
+        self.assertEqual(telemetry.build_health_rows({"temp_c": None, "rh": None}, self.timestamp,
+                                                     "serial-1"), [])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Heat Pump">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>Heat Pump Doctor</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #fff; --text: #17202b; --muted: #677285; --line: #e2e6ec;
+    --ok: #15803d; --ok-bg: #e7f6ec; --watch: #b45309; --watch-bg: #fdf3e2;
+    --alert: #b91c1c; --alert-bg: #fde8e8; --unk: #677285; --unk-bg: #eef1f5; --brand: #0f766e; --on-brand: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141a; --card: #18202a; --text: #e8edf3; --muted: #93a0b3; --line: #263140;
+      --ok: #4ade80; --ok-bg: #12301f; --watch: #fbbf24; --watch-bg: #33270f;
+      --alert: #f87171; --alert-bg: #3a1616; --unk: #93a0b3; --unk-bg: #1f2833; --brand: #2dd4bf; --on-brand: #042f2c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+  .wrap { max-width: 520px; margin: 0 auto;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  header img { width: 32px; height: 32px; }
+  h1 { font-size: 19px; margin: 0; }
+  #seen { color: var(--muted); font-size: 13px; }
+  .banner { border-radius: 16px; padding: 18px; margin-bottom: 14px; display: flex; align-items: center; gap: 14px; }
+  .banner .big { font-size: 22px; font-weight: 700; }
+  .banner .sub { font-size: 14px; opacity: .85; }
+  .banner svg { flex: none; width: 40px; height: 40px; }
+  .ok { background: var(--ok-bg); color: var(--ok); }
+  .watch { background: var(--watch-bg); color: var(--watch); }
+  .alert { background: var(--alert-bg); color: var(--alert); }
+  .unknown { background: var(--unk-bg); color: var(--unk); }
+  .list { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 16px; min-height: 72px; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .ico { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; }
+  .ico svg { width: 24px; height: 24px; }
+  .name { font-weight: 600; font-size: 17px; }
+  .msg { color: var(--muted); font-size: 14px; }
+  .txt { flex: 1; min-width: 0; }
+  .pill { flex: none; font-weight: 700; font-size: 13px; padding: 5px 11px; border-radius: 999px; }
+  .alerts { margin-top: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .alerts p { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+  button { font: inherit; font-weight: 600; width: 100%; min-height: 48px; border-radius: 12px; border: 0;
+    background: var(--brand); color: var(--on-brand); cursor: pointer; }
+  button.secondary { background: transparent; color: var(--brand); border: 1px solid var(--line); margin-top: 8px; }
+  button:disabled { opacity: .5; }
+  #hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .demo { font-size: 12px; text-align: center; color: var(--muted); margin-top: 14px; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="/icon.svg" alt="">
+    <div><h1>My heat pump</h1><div id="seen">connecting…</div></div>
+  </header>
+  <div id="banner" class="banner unknown">
+    <span id="bannerIcon"></span>
+    <div><div class="big" id="bannerBig">Loading…</div><div class="sub" id="bannerSub"></div></div>
+  </div>
+  <div class="list" id="list"></div>
+  <div class="alerts">
+    <p>Get a notification on this phone when something needs action.</p>
+    <button id="pushBtn" type="button">Turn on alerts</button>
+    <button id="testBtn" class="secondary" type="button" hidden>Send a test alert</button>
+    <div id="hint"></div>
+  </div>
+  <div class="demo" id="demo" hidden>Demo data: a simulated heat pump.</div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const NAMES = { coil: 'Coil cleanliness', fan: 'Fan', compressor: 'Compressor', defrost: 'Defrost' };
+const PILL = { ok: 'OK', watch: 'Watch', alert: 'Action', unknown: '–' };
+const BANNER = {
+  ok: ['All good', 'Your heat pump is running normally.'],
+  watch: ['Keep an eye on it', 'Nothing urgent. Details below.'],
+  alert: ['Action needed', 'See below what to do.'],
+  unknown: ['Getting to know your heat pump', 'The sensor is still learning how it normally sounds.'],
+};
+const ICON = {
+  coil: '<path d="M3 6h18M3 10h18M3 14h18M3 18h18" stroke-width="2" stroke-linecap="round"/>',
+  fan: '<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7 2 0 3 2 1 5l-3 3M14 12c4 0 7 1 7 4 0 2-2 3-5 1l-3-3M12 14c0 4-1 7-4 7-2 0-3-2-1-5l3-3M10 12c-4 0-7-1-7-4 0-2 2-3 5-1l3 3" stroke-width="1.6"/>',
+  compressor: '<rect x="5" y="7" width="14" height="13" rx="3" stroke-width="2"/><path d="M9 7V4h6v3M9 13h6" stroke-width="2" stroke-linecap="round"/>',
+  defrost: '<path d="M12 2v20M4 7l16 10M20 7L4 17M9 4l3 3 3-3M9 20l3-3 3 3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+};
+const STATE_ICON = {
+  ok: '<path d="M8 21l8 8 16-17" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+  watch: '<circle cx="20" cy="20" r="15" stroke-width="3.5"/><path d="M20 11v11" stroke-width="4" stroke-linecap="round"/><circle cx="20" cy="28.5" r="2.3" fill="currentColor" stroke="none"/>',
+  alert: '<path d="M20 5l17 30H3z" stroke-width="3.5" stroke-linejoin="round"/><path d="M20 16v9" stroke-width="4" stroke-linecap="round"/><circle cx="20" cy="30" r="2.3" fill="currentColor" stroke="none"/>',
+  unknown: '<circle cx="20" cy="20" r="15" stroke-width="3.5" stroke-dasharray="6 5"/>',
+};
+const svg = (inner, box) => `<svg viewBox="0 0 ${box} ${box}" fill="none" stroke="currentColor">${inner}</svg>`;
+
+let device = new URLSearchParams(location.search).get('d');
+
+function ago(s) {
+  if (s < 90) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + ' min ago';
+  if (s < 2 * 86400) return Math.round(s / 3600) + ' h ago';
+  return Math.round(s / 86400) + ' days ago';
+}
+
+function render(s) {
+  const lvl = s.online ? s.overall : 'unknown';
+  const b = $('banner');
+  b.className = 'banner ' + lvl;
+  $('bannerIcon').innerHTML = svg(STATE_ICON[lvl], 40);
+  [$('bannerBig').textContent, $('bannerSub').textContent] = s.online ? BANNER[lvl]
+    : ['Sensor offline', 'Last heard from it ' + ago(s.age_s) + '. Check its power and Wi-Fi.'];
+  $('seen').textContent = 'Updated ' + ago(s.age_s);
+  $('list').innerHTML = '';
+  for (const k of ['coil', 'fan', 'compressor', 'defrost']) {
+    const c = s.components[k] || { level: 'unknown', text: 'No data yet' };
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<div class="ico ${c.level}">${svg(ICON[k], 24)}</div>
+      <div class="txt"><div class="name"></div><div class="msg"></div></div>
+      <span class="pill ${c.level}">${PILL[c.level]}</span>`;
+    row.querySelector('.name').textContent = NAMES[k];
+    row.querySelector('.msg').textContent = c.text;
+    $('list').appendChild(row);
+  }
+  $('demo').hidden = !s.demo;
+}
+
+async function load() {
+  try {
+    if (!device) {
+      const d = await (await fetch('/api/devices')).json();
+      if (!d.devices.length) throw new Error('none');
+      device = d.devices[0];
+      history.replaceState(null, '', '?d=' + device);
+    }
+    const r = await fetch('/api/status/' + device, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    render(await r.json());
+  } catch (e) {
+    $('banner').className = 'banner unknown';
+    $('bannerBig').textContent = 'No data yet';
+    $('bannerSub').textContent = 'Waiting for the sensor to report.';
+    $('seen').textContent = 'not connected';
+  }
+}
+
+// --- Push alerts ----------------------------------------------------------------
+const b64ToBytes = s => Uint8Array.from(atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+async function pushState() {
+  const btn = $('pushBtn');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    btn.disabled = true;
+    $('hint').textContent = isIOS && !standalone
+      ? 'On iPhone: tap Share, then "Add to Home Screen", and open the app from there to turn on alerts.'
+      : 'This browser does not support alerts.';
+    return null;
+  }
+  let reg, sub;
+  try {
+    reg = await navigator.serviceWorker.register('/sw.js');
+    sub = await reg.pushManager.getSubscription();
+  } catch (e) {
+    btn.disabled = true;
+    $('hint').textContent = 'Alerts are not available in this browser (' + e.message + ').';
+    return null;
+  }
+  btn.textContent = sub ? 'Alerts are on: turn off' : 'Turn on alerts';
+  $('testBtn').hidden = !sub;
+  return { reg, sub };
+}
+
+$('pushBtn').onclick = async () => {
+  const st = await pushState();
+  if (!st || !device) return;
+  $('hint').textContent = '';
+  try {
+    if (st.sub) {
+      await fetch('/api/push/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: st.sub.endpoint }) });
+      await st.sub.unsubscribe();
+    } else {
+      const { publicKey } = await (await fetch('/api/push/key')).json();
+      if (!publicKey) { $('hint').textContent = 'Alerts are not set up on the server yet.'; return; }
+      if (await Notification.requestPermission() !== 'granted') {
+        $('hint').textContent = 'Notifications are blocked. Allow them in your browser settings.'; return;
+      }
+      const sub = await st.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(publicKey) });
+      const r = await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device, subscription: sub.toJSON() }) });
+      if (!r.ok) throw new Error('subscribe failed');
+      $('hint').textContent = 'Done. You will get a notification when something needs action.';
+    }
+  } catch (e) {
+    $('hint').textContent = 'Could not change alerts: ' + e.message;
+  }
+  pushState();
+};
+
+$('testBtn').onclick = async () => {
+  const r = await fetch('/api/push/test', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device }) });
+  $('hint').textContent = r.ok ? 'Test alert sent.' : 'Test failed.';
+};
+
+load();
+pushState();
+setInterval(load, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
