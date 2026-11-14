@@ -39,14 +39,15 @@ class CloudPushTests(unittest.TestCase):
         module = types.ModuleType("pywebpush")
         module.WebPushException = WebPushException
         module.webpush = webpush
+        sub = {"endpoint": "https://fcm.googleapis.com/fcm/send/subscription"}
         with patch.dict(sys.modules, {"pywebpush": module}):
-            self.assertEqual(cloud.send_push({}, {}), "sent")
+            self.assertEqual(cloud.send_push(sub, {}), "sent")
             for status in (404, 410):
                 outcome["status"] = status
-                self.assertEqual(cloud.send_push({}, {}), "expired")
+                self.assertEqual(cloud.send_push(sub, {}), "expired")
             for status in (429, 503):
                 outcome["status"] = status
-                self.assertEqual(cloud.send_push({}, {}), "retry")
+                self.assertEqual(cloud.send_push(sub, {}), "retry")
 
     def test_alert_retries_only_recipients_not_yet_handled(self):
         subscriptions = [
