@@ -78,6 +78,41 @@ Smoke test result: Thermo OK (24.0 °C, 35 % RH). We have no Modulino Movement; 
 Example apps worth reading on the board: `~/.local/share/arduino-app-cli/examples/`
 (`real-time-accelerometer`, `audio-classification` uses `arduino.app_peripherals.microphone.Microphone`).
 
+## Cloud telemetry
+
+The app can publish the latest real Thermo reading to PostgreSQL every 60
+seconds. Audio and video cloud telemetry are placeholders only; local analytics
+are unchanged. The app keeps running locally if telemetry is not configured or
+the database is unreachable. The [schema contract](schema/README.md) describes
+the existing table, proposed future metric table, IDs and limitations. Only one
+temperature sensor is currently connected.
+
+1. Have a database administrator inspect the existing `sensors.measurements`
+   schema. The device user needs `USAGE` on schema `sensors` and `INSERT` on
+   `sensors.measurements`. Do not use the Terraform state credentials.
+2. Obtain the database connection URI for a restricted writer and the Aiven CA
+   certificate. Copy `python/.env.example` to `python/.env` on the board,
+   set `PG_CONNINFO`. The app derives its sensor ID from the board's hardware
+   serial; no device ID needs to be configured.
+   Put the CA at `python/aiven-ca.pem`, or set `PGSSLROOTCERT` to its path
+   (relative paths are relative to the Python directory). The connection always
+   uses `sslmode=verify-full` and validates the hostname.
+3. Keep the `.env` file and certificate out of Git. Restrict access to the
+   credentials while ensuring the App Lab container can read them. This is a
+   temporary provisioning method: the file may be copied into the app/container
+   during deployment and is accessible to users or processes with sufficient
+   board/container access. Never share it, and rotate the password if exposed.
+4. Deploy the app, including its Python dependencies and configuration, and
+   restart it. For the existing USB deployment flow, the `adb push` of the
+   `python` directory includes `python/.env` if it is present on the Mac; or
+   place it in the board's app `python` directory before restarting. Check
+   `docker logs -f heatpump-doctor-main-1` for `telemetry published` or an
+   explicit configuration/connection error. A new dependency install may
+   require internet on the board.
+
+The simulator must be stopped separately if only real readings are desired.
+Telemetry uses different sensor IDs, so real and simulated rows are distinct.
+
 ## Wireless access (SSH)
 SSH was off on the stock image and had no host keys. Enabled once over adb (needs the `arduino` password):
 
@@ -114,6 +149,31 @@ ssh uno-q 'arduino-app-cli properties set default none'
 ```
 
 After a reset the board needs about a minute to rejoin Wi-Fi.
+
+### Backup Wi-Fi
+
+NetworkManager can save multiple Wi-Fi profiles. It prefers the available
+autoconnect profile with the higher priority when establishing a connection;
+it does not switch merely because the connected network has lost internet.
+Avoid putting Wi-Fi passwords in source control or command history. On the
+board, configure a network interactively with `nmcli --ask` and set
+`connection.autoconnect-priority` on its saved profile. A negative priority
+can keep a backup below a primary with priority zero.
+
+Docker captures its upstream DNS servers when the app container starts. After
+switching networks, the old DNS server may be unreachable even though the
+board itself can resolve names. To refresh DNS automatically, install the
+NetworkManager dispatcher script below. It restarts only the running Heat Pump
+Doctor container when `wlan0` connects; the dashboard and sensor collection
+briefly stop. It logs failures to the system journal. This does not detect
+internet-only failures or preserve unsent telemetry during a restart.
+
+```bash
+adb push tools/heatpump-wifi-dns /home/arduino/heatpump-wifi-dns
+adb shell -t 'sudo install -o root -g root -m 755 /home/arduino/heatpump-wifi-dns /etc/NetworkManager/dispatcher.d/90-heatpump-wifi-dns'
+```
+
+Check `journalctl -t heatpump-wifi-dns` on the board after a network change.
 
 **App Lab over Wi-Fi:** network mode was off on the stock image, so App Lab and mDNS could not find the board.
 Enabled with `ssh -t uno-q 'arduino-app-cli system network-mode enable'` (asks for the `arduino` password).
