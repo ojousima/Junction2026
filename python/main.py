@@ -96,11 +96,13 @@ def set_alarm(on):
         Bridge.call("alarm", bool(on))
     except Exception as e:
         print(f"alarm call failed: {e}")
+        return False
+    return True
 
 
 def mic_loop():
     global physics
-    alarm_was = False
+    alarm_was = None
     while True:
         try:
             pcm = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, device=MIC_DEVICE, channels=1, rate=SR,
@@ -120,8 +122,7 @@ def mic_loop():
                     bands_db, rms_dbfs, peak_hz = band_features(x)
                     feats = features(x)
                     det = detector.update(feats)
-                    if det["alarm"] != alarm_was:
-                        set_alarm(det["alarm"])
+                    if det["alarm"] != alarm_was and set_alarm(det["alarm"]):
                         alarm_was = det["alarm"]
                     with lock:
                         physics = [round(float(v), 3) for v in feats]
