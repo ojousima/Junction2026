@@ -198,9 +198,14 @@ $('pushBtn').onclick = async () => {
         $('hint').textContent = 'Notifications are blocked. Allow them in your browser settings.'; return;
       }
       const sub = await st.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(publicKey) });
-      const r = await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device, subscription: sub.toJSON() }) });
-      if (!r.ok) throw new Error('subscribe failed');
+      try {
+        const r = await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device, subscription: sub.toJSON() }) });
+        if (!r.ok) throw new Error('subscribe failed');
+      } catch (e) {
+        await sub.unsubscribe();
+        throw e;
+      }
       $('hint').textContent = 'Done. You will get a notification when something needs action.';
     }
   } catch (e) {
