@@ -175,6 +175,11 @@ adb shell -t 'sudo install -o root -g root -m 755 /home/arduino/heatpump-wifi-dn
 
 Check `journalctl -t heatpump-wifi-dns` on the board after a network change.
 
+**App Lab over Wi-Fi:** network mode was off on the stock image, so App Lab and mDNS could not find the board.
+Enabled with `ssh -t uno-q 'arduino-app-cli system network-mode enable'` (asks for the `arduino` password).
+The board now announces `_arduino._tcp` as `uno-q` and resolves as `uno-q.local`, so App Lab lists it as a
+network board and `ssh arduino@uno-q.local` works without knowing the IP.
+
 ### Team access
 Each teammate makes their own key and sends only the **public** half (`.pub`). Never share a private key.
 
