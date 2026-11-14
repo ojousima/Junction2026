@@ -1,15 +1,19 @@
-"""Publish sampled sensor readings to PostgreSQL without blocking acquisition."""
+"""Publish sampled sensor readings and the end-user health summary to PostgreSQL
+without blocking acquisition."""
 
 import math
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from contextlib import closing
 from pathlib import Path
 
 import psycopg2
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
+
+import health
 
 
 def hardware_serial():
@@ -35,6 +39,24 @@ def build_rows(state, sample_times, sent_times, serial):
         included["thermo"] = timestamp
 
     return measurements, included
+
+
+def device_id(serial):
+    """Stable public ID of this heat pump sensor (used in the cloud dashboard URL)."""
+    return sensor_id(serial, "heatpump-1")
+
+
+def build_health_rows(state, now, serial):
+    """One row per component (coil, fan, compressor, defrost) with level and text.
+
+    Sent every interval, not only on change, so the cloud also knows the device is online.
+    Nothing is sent while every component is still unknown (e.g. right after boot).
+    """
+    summary = health.summarize(state)
+    if summary["overall"] == "unknown":
+        return []
+    dev = device_id(serial)
+    return [(dev, now, name, c["level"], c["text"]) for name, c in summary["components"].items()]
 
 
 def audio_metrics():
@@ -80,20 +102,33 @@ def run(snapshot):
 
     sent_times = {}
     print(f"telemetry enabled: publishing latest samples every {interval:g} seconds", flush=True)
+    print(f"health summary for device {device_id(serial)}", flush=True)
     while True:
         state, sample_times = snapshot()
         measurements, included = build_rows(state, sample_times, sent_times, serial)
-        if measurements:
+        health_rows = build_health_rows(state, datetime.now(timezone.utc), serial)
+        if measurements or health_rows:
             try:
                 with closing(psycopg2.connect(conninfo, connect_timeout=10, sslmode="verify-full",
                                               sslrootcert=str(ca_path))) as conn:
-                    with conn:
-                        with conn.cursor() as cur:
-                            execute_values(cur, "INSERT INTO sensors.measurements "
-                                           "(sensor_id, time, temperature, humidity) VALUES %s",
-                                           measurements)
-                sent_times.update(included)
-                print(f"telemetry published: {len(measurements)} measurements", flush=True)
+                    if measurements:
+                        with conn:
+                            with conn.cursor() as cur:
+                                execute_values(cur, "INSERT INTO sensors.measurements "
+                                               "(sensor_id, time, temperature, humidity) VALUES %s",
+                                               measurements)
+                        sent_times.update(included)
+                    if health_rows:  # own transaction: a missing table never blocks measurements
+                        try:
+                            with conn:
+                                with conn.cursor() as cur:
+                                    execute_values(cur, "INSERT INTO sensors.health_status "
+                                                   "(device_id, time, component, level, message) VALUES %s",
+                                                   health_rows)
+                        except psycopg2.Error as exc:
+                            print(f"health publish failed: {exc}", flush=True)
+                print(f"telemetry published: {len(measurements)} measurements, "
+                      f"{len(health_rows)} health rows", flush=True)
             except (psycopg2.Error, OSError) as exc:
                 print(f"telemetry publish failed; retrying latest samples in {interval:g}s: {exc}",
                       flush=True)

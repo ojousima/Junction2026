@@ -1,0 +1,102 @@
+import asyncio
+import sys
+import types
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "cloud"))
+import app as cloud
+
+
+class StoreStub:
+    def __init__(self, subscriptions):
+        self.subs = subscriptions
+        self.unsubscribed = []
+
+    def subscriptions(self, device=None):
+        return list(self.subs)
+
+    def unsubscribe(self, endpoint):
+        self.unsubscribed.append(endpoint)
+        self.subs = [(device, sub) for device, sub in self.subs
+                     if sub["endpoint"] != endpoint]
+
+
+class CloudPushTests(unittest.TestCase):
+    def test_send_push_distinguishes_success_expired_and_retry(self):
+        class WebPushException(Exception):
+            def __init__(self, status):
+                self.response = types.SimpleNamespace(status_code=status)
+
+        outcome = {"status": None}
+
+        def webpush(**_kwargs):
+            status = outcome["status"]
+            if status is not None:
+                raise WebPushException(status)
+
+        module = types.ModuleType("pywebpush")
+        module.WebPushException = WebPushException
+        module.webpush = webpush
+        with patch.dict(sys.modules, {"pywebpush": module}):
+            self.assertEqual(cloud.send_push({}, {}), "sent")
+            for status in (404, 410):
+                outcome["status"] = status
+                self.assertEqual(cloud.send_push({}, {}), "expired")
+            for status in (429, 503):
+                outcome["status"] = status
+                self.assertEqual(cloud.send_push({}, {}), "retry")
+
+    def test_alert_retries_only_recipients_not_yet_handled(self):
+        subscriptions = [
+            ("device", {"endpoint": "https://push/sent"}),
+            ("device", {"endpoint": "https://push/retry"}),
+            ("device", {"endpoint": "https://push/expired"}),
+        ]
+        store = StoreStub(subscriptions)
+        pending = {}
+        attempts = []
+        outcomes = iter(("sent", "retry", "expired", "sent"))
+
+        def send(sub, _payload):
+            attempts.append(sub["endpoint"])
+            return next(outcomes)
+
+        with patch.object(cloud, "store", store), patch.object(cloud, "send_push", side_effect=send):
+            self.assertFalse(cloud.push_alert("device", "fan", "Fan problem", pending))
+            self.assertEqual(set(pending[("device", "fan")]), {"https://push/retry"})
+            self.assertEqual(store.unsubscribed, ["https://push/expired"])
+            self.assertTrue(cloud.push_alert("device", "fan", "Fan problem", pending))
+
+        self.assertEqual(attempts, [
+            "https://push/sent", "https://push/retry", "https://push/expired",
+            "https://push/retry",
+        ])
+        self.assertEqual(pending, {})
+
+    def test_test_push_counts_only_successful_sends(self):
+        device = cloud.Demo.DEVICE
+        subscriptions = [
+            (device, {"endpoint": "https://push/sent"}),
+            (device, {"endpoint": "https://push/retry"}),
+            (device, {"endpoint": "https://push/expired"}),
+        ]
+        store = StoreStub(subscriptions)
+        outcomes = iter(("sent", "retry", "expired"))
+
+        class RequestStub:
+            async def json(self):
+                return {"device": device}
+
+        with patch.object(cloud, "store", store), patch.object(
+            cloud, "VAPID_PRIVATE", "configured"
+        ), patch.object(cloud, "send_push", side_effect=lambda *_: next(outcomes)):
+            result = asyncio.run(cloud.api_push_test(RequestStub()))
+
+        self.assertEqual(result, {"sent": 1})
+        self.assertEqual(store.unsubscribed, ["https://push/expired"])
+
+
+if __name__ == "__main__":
+    unittest.main()
