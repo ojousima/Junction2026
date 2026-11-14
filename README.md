@@ -28,3 +28,24 @@ The database contract and device telemetry setup are documented in
 CI builds the UNO Q sketch and checks Python syntax on a CRACI runner. The repository must be
 connected to CRACI for the `craci` runner label to be available. Hardware and App Lab runtime
 behavior still need to be tested on the UNO Q.
+
+## Coil cleanliness indicator (dashboard contract)
+
+The dashboard shows a "Coil cleanliness" card (gauge, status, trend, history) driven by
+`state["coil"]` in `/api/state`. The fouling tracker fills it; until it does, the card
+shows "Waiting for coil tracker". All fields except `cleanliness_pct` are optional.
+
+```python
+state["coil"] = {
+    "status": "monitoring",          # or "learning" while the clean baseline is built
+    "learning_progress": 0.4,        # 0..1, shown while learning
+    "cleanliness_pct": 82.0,         # 100 = as clean as when the baseline was learned
+    "uncertainty_pct": 6.0,          # 1 sigma, drawn as a band on gauge and trend
+    "trend_pct_per_day": -2.4,       # negative = getting dirtier
+    "days_to_clean": 14,             # optional; otherwise estimated from the trend
+    "watch_pct": 70, "clean_pct": 50,  # thresholds ("getting dirty" / "clean the coil")
+    "message": "Airflow noise and compressor speed are higher than at the same temperature when clean.",
+    "history": [[unix_time, pct, uncertainty], ...],  # optional, e.g. hourly for 14 days;
+                                                       # without it the page keeps its own
+}
+```
