@@ -66,10 +66,20 @@ class Postgres:
         import psycopg2.extras
         self.pg, self.extras = psycopg2, psycopg2.extras
         self.kwargs = {}
-        ca = os.environ.get("AIVEN_CA_CERT", "").strip()
-        if not ca and os.environ.get("PROJECT_CA_CERT", "").strip():
-            ca = base64.b64decode(os.environ["PROJECT_CA_CERT"].strip(), validate=True).decode("utf-8")
+        aiven_ca = os.environ.get("AIVEN_CA_CERT", "").strip()
+        project_ca = os.environ.get("PROJECT_CA_CERT", "").strip()
+        source = "AIVEN_CA_CERT" if aiven_ca else "PROJECT_CA_CERT" if project_ca else "connection settings"
+        print(f"PostgreSQL CA: source={source}, AIVEN_CA_CERT set={bool(aiven_ca)}, "
+              f"PROJECT_CA_CERT set={bool(project_ca)}", flush=True)
+        ca = aiven_ca
+        if not ca and project_ca:
+            ca = base64.b64decode(project_ca, validate=True).decode("utf-8")
         if ca:  # verified TLS when the CA is provided; otherwise the URI's sslmode applies
+            has_line_breaks = "\n" in ca
+            has_escaped_newlines = "\\n" in ca
+            print(f"PostgreSQL CA PEM format: begin marker={'-----BEGIN CERTIFICATE-----' in ca}, "
+                  f"end marker={'-----END CERTIFICATE-----' in ca}, "
+                  f"line breaks={has_line_breaks}, escaped newlines={has_escaped_newlines}", flush=True)
             f = tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False)
             f.write(ca + "\n")
             f.close()

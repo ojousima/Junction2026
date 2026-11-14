@@ -54,6 +54,11 @@ uvicorn app:app --port 8080                  # open http://localhost:8080
    - optional `PUSH_POLL_SECONDS` (default 15)
 5. Redeploys are manual: "Deploy latest commit" after merging changes.
 
+On PostgreSQL startup, logs identify which CA variable is selected and whether its
+value has PEM markers and line breaks, without printing certificate or credential
+contents. If the environment editor cannot accept multiline PEM, put the base64-encoded
+complete PEM in `PROJECT_CA_CERT` and remove `AIVEN_CA_CERT`, which takes precedence.
+
 Health check: `GET /healthz`.
 
 ## Using it
