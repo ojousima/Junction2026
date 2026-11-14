@@ -8,6 +8,7 @@ Edge-AI retrofit sensor that hears heat pump faults and slow efficiency loss (co
 - `python/`: Linux-side Python app (anomaly score, fouling tracker, dashboard)
 - `app.yaml`: Arduino App Lab app definition
 - `data/`: recorded sessions (CSV/WAV/JPG are git-ignored)
+- `infra/aiven/`: Terraform configuration and import instructions for Aiven services
 
 Setup and toolchain: see [SETUP.md](SETUP.md). Architecture and plan: see [CLAUDE.md](CLAUDE.md).
 
