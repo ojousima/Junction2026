@@ -184,7 +184,9 @@ def log_loop():
             history.append((round(t, 1), s["temp_c"], s["rh"], s["rms_dbfs"], s["peak_hz"], d["score"]))
             w.writerow([round(t, 1), "unlabeled", s["temp_c"], s["rh"], s["rms_dbfs"], s["peak_hz"],
                         s["cam_brightness"], d["score"], d["threshold"], int(d["alarm"])]
-                       + s["bands_db"] + ph)
+                       + (s["bands_db"] + [None] * N_BANDS)[:N_BANDS]
+                       + ((ph + [None] * len(FEATURE_NAMES))[:len(FEATURE_NAMES)]
+                          if s["mic_ok"] else [None] * len(FEATURE_NAMES)))
             f.flush()
 
 
