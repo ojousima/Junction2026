@@ -2,7 +2,7 @@ import asyncio
 import sys
 import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 with patch.dict("os.environ", {"DATABASE_URL": ""}):
     from infra.aiven.cloud import app as cloud
@@ -23,6 +23,23 @@ class StoreStub:
 
 
 class CloudPushTests(unittest.TestCase):
+    def test_ip_component_never_generates_alerts(self):
+        store = MagicMock()
+        store.subscriptions.return_value = [("device", {"endpoint": "https://push/sub"})]
+        store.latest.return_value = {
+            "fan": {"level": "ok", "text": "Fan OK"},
+            "local_ip": {"level": "alert", "text": "10.0.38.191"},
+        }
+        store.alert_state.return_value = {}
+        with patch.object(cloud, "store", store), patch.object(cloud, "VAPID_PRIVATE", "configured"), \
+                patch.object(cloud, "push_alert") as push_alert, \
+                patch.object(cloud.time, "sleep", side_effect=StopIteration), \
+                self.assertRaises(StopIteration):
+            cloud.push_loop()
+
+        push_alert.assert_not_called()
+        store.set_alert_state.assert_called_once_with("device", "fan", "ok")
+
     def test_send_push_distinguishes_success_expired_and_retry(self):
         class WebPushException(Exception):
             def __init__(self, status):

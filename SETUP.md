@@ -110,6 +110,22 @@ temperature sensor is currently connected.
    explicit configuration/connection error. A new dependency install may
    require internet on the board.
 
+The cloud health API can also report the UNO Q's Wi-Fi IPv4 address. Because the
+app runs in a bridged container, install this separate NetworkManager dispatcher on
+the board after deploying the updated app:
+
+```bash
+sudo install -o root -g root -m 755 ~/ArduinoApps/heatpump-doctor/tools/heatpump-lan-ip /etc/NetworkManager/dispatcher.d/95-heatpump-lan-ip
+sudo /etc/NetworkManager/dispatcher.d/95-heatpump-lan-ip wlan0 up
+```
+
+The helper writes the host `wlan0` address and current boot ID to `data/board-lan-ip`
+for the container and clears them on Wi-Fi disconnect. The app ignores stale files from
+previous boots. It updates on connection or DHCP changes; check
+`journalctl -t heatpump-lan-ip` if unavailable. The address uses a `local_ip`
+component in the existing health table; no database migration is needed. The
+unauthenticated cloud status API exposes this address.
+
 The simulator must be stopped separately if only real readings are desired.
 Telemetry uses different sensor IDs, so real and simulated rows are distinct.
 

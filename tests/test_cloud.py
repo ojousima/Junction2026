@@ -3,6 +3,7 @@ import binascii
 import sys
 import types
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import requests
@@ -92,6 +93,36 @@ class DatabaseTLSConfigurationTests(unittest.TestCase):
                 patch.dict("os.environ", {"AIVEN_CA_CERT": "", "PROJECT_CA_CERT": "not base64!"}), \
                 self.assertRaises(binascii.Error):
             cloud_app.Postgres("postgresql://example")
+
+
+class CloudStatusTests(unittest.TestCase):
+    def test_status_uses_address_from_latest_health_row(self):
+        now = datetime.now(timezone.utc)
+        latest = {
+            "coil": {"time": now - timedelta(seconds=1), "level": "ok",
+                     "text": "OK"},
+            "fan": {"time": now, "level": "ok", "text": "OK"},
+            "local_ip": {"time": now, "level": "ok", "text": "10.0.38.191"},
+        }
+        with patch.object(cloud_app.store, "latest", return_value=latest):
+            self.assertEqual(cloud_app.api_status(cloud_app.Demo.DEVICE)["local_ip"], "10.0.38.191")
+            latest["local_ip"]["level"] = "unknown"
+            self.assertIsNone(cloud_app.api_status(cloud_app.Demo.DEVICE)["local_ip"])
+            latest["local_ip"].update(level="ok", time=now - timedelta(seconds=1))
+            self.assertIsNone(cloud_app.api_status(cloud_app.Demo.DEVICE)["local_ip"])
+            latest["local_ip"].update(level="alert", time=now + timedelta(days=1))
+            status = cloud_app.api_status(cloud_app.Demo.DEVICE)
+            self.assertEqual(status["overall"], "ok")
+            self.assertEqual(status["last_seen"], now.isoformat())
+            self.assertIsNone(status["local_ip"])
+
+    def test_postgres_latest_includes_the_local_address(self):
+        now = datetime.now(timezone.utc)
+        rows = [{"component": "local_ip", "level": "ok", "message": "10.0.38.191",
+                 "time": now}]
+        db = cloud_app.Postgres.__new__(cloud_app.Postgres)
+        with patch.object(db, "run", return_value=rows):
+            self.assertEqual(db.latest(cloud_app.Demo.DEVICE)["local_ip"]["text"], "10.0.38.191")
 
 
 if __name__ == "__main__":
