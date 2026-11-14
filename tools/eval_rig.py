@@ -112,10 +112,13 @@ def main():
                         sc = np.median(model.score(np.array([fn(w) for w in windows(y)])))
                         others.append((unit, fname, name, sc / model.thr))
             # Factory model: trained on all other units, never heard this one
-            pooled = np.vstack([c for u in units if u != unit for c in X[u]["noise-augmented"]])
-            model = Model(n_components=len(units) - 1).fit(pooled)
-            louo.append({"unit": unit, "features": fname, "training": "other units only",
-                         **evaluate(model, X[unit]["test"], d["kinds"])})
+            if len(units) > 1:
+                pooled = np.vstack([c for u in units if u != unit for c in X[u]["noise-augmented"]])
+                model = Model(n_components=len(units) - 1).fit(pooled)
+                louo.append({"unit": unit, "features": fname, "training": "other units only",
+                             **evaluate(model, X[unit]["test"], d["kinds"])})
+            else:
+                print("Skipping leave-one-unit-out evaluation: at least two rig units are required.")
         print(f"done: {fname}", flush=True)
 
     table("1) Per-unit model, mean over units (AUC per fault, 0.5 = chance)", per_unit, ["features", "training"])
