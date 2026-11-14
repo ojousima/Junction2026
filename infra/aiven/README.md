@@ -72,13 +72,26 @@ direct connection to the primary PostgreSQL port, not PgBouncer.
 
 ## Import and verify
 
-From this directory, initialize and import all three existing resources:
+From this directory, initialize the backend and inspect the shared state:
 
 ```sh
 terraform init
+terraform state list
+```
+
+The existing services and integration have already been imported into the shared
+state. Imports are a one-time bootstrap operation, not a step for each user or
+CI run. If bootstrapping a new, empty state, import all three resources:
+
+```sh
 terraform import aiven_pg.postgres junction2026/pg-1ad8c70c
 terraform import aiven_grafana.grafana junction2026/grafana-2b2ab510
 terraform import aiven_service_integration.grafana_postgres junction2026/3971957f-9e5e-4ff8-bc23-451256ac2063
+```
+
+Then review the plan:
+
+```sh
 terraform plan
 ```
 
@@ -98,3 +111,24 @@ check its health separately in Aiven.
 
 The lock file should be committed. Never commit state, credentials, saved plan
 files, `.terraform/`, or backend configuration containing passwords.
+
+## GitHub Actions
+
+The Aiven Terraform workflow validates pull requests without credentials.
+Changes under `infra/aiven/` merged to `main` automatically plan and apply;
+the workflow can also be started manually on `main`. Deployments are serialized
+and fail if any of the three existing resources is missing from shared state.
+Automatic apply also refuses plans containing deletions or replacements.
+There is no approval step, so protect `main` and review infrastructure changes
+before merging. Terraform plans and applies can change live services.
+
+Add these repository secrets under **Settings > Secrets and variables > Actions**:
+
+- `AIVEN_TOKEN`: an Aiven API token with permission to manage the project.
+- `TERRAFORM_STATE_PASSWORD`: the password for the `terraform_state` database user.
+- `AIVEN_CA_CERT`: the complete Aiven project CA certificate in PEM format,
+  including the BEGIN and END lines.
+
+The workflow connects to the existing state database using TLS verification.
+It does not upload the saved plan or use the local `.env` file. Do not expose
+these secrets to pull requests from untrusted branches or print them in logs.
