@@ -77,6 +77,16 @@ def split(items, n, test_share, seed):
     return items[:k], items[k:]
 
 
+def reconcile_normal_split(out, jobs):
+    """Remove stale CANDAS normal clips after the current split is generated."""
+    split_dirs = (out / "training/normal", out / "testing/normal")
+    expected = {dest for _, dest in jobs if dest.parent in split_dirs}
+    for folder in split_dirs:
+        for path in folder.glob("candas_*.wav"):
+            if path not in expected:
+                path.unlink()
+
+
 # --- CANDAS: two small DC cooling fans, magnets on blades (imbalance) -------------
 def candas(per_class, test_share):
     out = ROOT / "candas"
@@ -104,6 +114,7 @@ def candas(per_class, test_share):
     print(f"CANDAS: {len(jobs)} clips")
     with ThreadPoolExecutor(4) as pool:
         list(pool.map(one, jobs))
+    reconcile_normal_split(out, jobs)
 
 
 def list_hf(folder):
