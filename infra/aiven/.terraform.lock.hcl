@@ -5,6 +5,7 @@ provider "registry.terraform.io/aiven/aiven" {
   version     = "4.66.0"
   constraints = "~> 4.66.0"
   hashes = [
+    "h1:+vyngJtIYfz6Tn0VDHmp2v8u+LQwwBY6z2zwMC09PJQ=",
     "h1:viXnHtKzSzUEQ3IbjAUrVG0tRH5EsYovBtLHP83UToc=",
     "zh:12be433498921b21475c10cbb7a3cc1fded75f601e93c54f974713e917492b9d",
     "zh:501de3751e8bd61b4d1401f52944c77f64e10638cc5bc29b5f91fd6f3e3b31ed",
