@@ -43,3 +43,15 @@ python3 tools/simulator.py --dry-run      # print rows, no database needed
   ask whoever provisioned the schema.
 
 Never commit `PG_CONNINFO` — it contains the password.
+
+## fetch_audio.py
+
+Downloads public machine-sound data (CANDAS fan imbalance, MIMII fan, RWTH heat pump
+stimuli, ESC-50 background noise) into `data/audio/` as 16 kHz mono WAV for Edge
+Impulse. Standard library plus `ffmpeg`. Layout, licenses and upload commands:
+see [data/audio/README.md](../data/audio/README.md).
+
+```bash
+python3 tools/fetch_audio.py                # everything, about 2.5 GB download
+python3 tools/fetch_audio.py --only candas  # one source
+```
