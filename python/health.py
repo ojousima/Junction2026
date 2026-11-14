@@ -55,7 +55,10 @@ def _sound_levels(det, mic_ok):
     """Fan and compressor levels from the fault detector and its reasons."""
     if not mic_ok or not det or det.get("mode") != "monitoring":
         return "unknown", "unknown"
-    over = det.get("score") is not None and det.get("threshold") is not None and det["score"] > det["threshold"]
+    over = bool(det.get("alarm")) or (
+        det.get("score") is not None and det.get("threshold") is not None
+        and det["score"] > det["threshold"]
+    )
     if not over:
         return "ok", "ok"
     level = "alert" if det.get("alarm") else "watch"
