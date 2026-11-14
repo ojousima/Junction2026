@@ -57,9 +57,15 @@ def fetch(url, dest, quiet=False):
 def to_16k(src, dest):
     """Convert any audio file (path or bytes) to 16 kHz mono 16-bit WAV."""
     dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(f"{dest.stem}.part{dest.suffix}")
     cmd = ["ffmpeg", "-loglevel", "error", "-y", "-i", "pipe:0" if isinstance(src, bytes) else str(src),
-           "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", str(dest)]
-    subprocess.run(cmd, input=src if isinstance(src, bytes) else None, check=True)
+           "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", str(tmp)]
+    try:
+        subprocess.run(cmd, input=src if isinstance(src, bytes) else None, check=True)
+        tmp.replace(dest)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
 def split(items, n, test_share, seed):
